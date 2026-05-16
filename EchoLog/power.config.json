@@ -1,0 +1,79 @@
+{
+  "version": "1.0",
+  "appId": null,
+  "appDisplayName": "EchoLog",
+  "region": "prod",
+  "environmentId": "87ff51b0-ae51-e1b3-9c45-e3178a566b10",
+  "description": " ",
+  "buildPath": "./dist",
+  "buildEntryPoint": "index.html",
+  "localAppUrl": "http://localhost:3000",
+  "logoPath": "Default",
+  "connectionReferences": {
+    "1a411424-f68a-42f2-84d3-4e8b484ef5ca": {
+      "id": "/providers/Microsoft.PowerApps/apis/shared_commondataservice",
+      "displayName": "Microsoft Dataverse",
+      "dataSources": [
+        "auditlogs",
+        "departments",
+        "fishbonecauses",
+        "incidents",
+        "notifications",
+        "paevidence",
+        "preventiveactions",
+        "processes",
+        "rcasubmissions",
+        "slarules",
+        "subdepartments",
+        "teams",
+        "userprofiles"
+      ],
+      "dataSets": {
+        "default.cds": {
+          "dataSources": {
+            "auditlogs": {
+              "tableName": "cr4c3_auditlogs"
+            },
+            "departments": {
+              "tableName": "cr4c3_departments"
+            },
+            "fishbonecauses": {
+              "tableName": "cr4c3_fishbonecauses"
+            },
+            "incidents": {
+              "tableName": "cr4c3_incidents"
+            },
+            "notifications": {
+              "tableName": "cr4c3_notifications"
+            },
+            "paevidence": {
+              "tableName": "cr4c3_paevidences"
+            },
+            "preventiveactions": {
+              "tableName": "cr4c3_preventiveactions"
+            },
+            "processes": {
+              "tableName": "cr4c3_processes"
+            },
+            "rcasubmissions": {
+              "tableName": "cr4c3_rcasubmissions"
+            },
+            "slarules": {
+              "tableName": "cr4c3_slarules"
+            },
+            "subdepartments": {
+              "tableName": "cr4c3_subdepartments"
+            },
+            "teams": {
+              "tableName": "cr4c3_teams"
+            },
+            "userprofiles": {
+              "tableName": "cr4c3_userprofiles"
+            }
+          }
+        }
+      }
+    }
+  },
+  "databaseReferences": {}
+}
