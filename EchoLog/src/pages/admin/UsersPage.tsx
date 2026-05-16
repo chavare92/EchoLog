@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Pencil, Search } from "lucide-react";
+import { Pencil, Search, Plus } from "lucide-react";
 import { useRoleGuard } from "@/auth/useRoleGuard";
-import { useUserProfiles, useUpdateUserProfile } from "@/hooks/useUserProfiles";
+import { useUserProfiles, useUpdateUserProfile, useCreateUserProfile } from "@/hooks/useUserProfiles";
 import { USER_ROLE } from "@/lib/constants";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -45,12 +45,21 @@ export function UsersPage() {
   const { isAdmin } = useRoleGuard();
   const { data: users, isLoading } = useUserProfiles();
   const updateUser = useUpdateUserProfile();
+  const createUser = useCreateUserProfile();
 
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Cr4c3_userprofilesBase | null>(null);
   const [editRole, setEditRole] = useState("");
   const [editManager, setEditManager] = useState("");
   const [editL2, setEditL2] = useState("");
+
+  // Add User dialog
+  const [addOpen, setAddOpen] = useState(false);
+  const [addName, setAddName] = useState("");
+  const [addEmail, setAddEmail] = useState("");
+  const [addPassword, setAddPassword] = useState("");
+  const [addRole, setAddRole] = useState("");
+  const [addError, setAddError] = useState("");
 
   if (!isAdmin) {
     return (
@@ -84,12 +93,34 @@ export function UsersPage() {
     await updateUser.mutateAsync({
       id: editing.cr4c3_userprofileid,
       fields: {
-        cr4c3_role: editRole ? Number(editRole) : undefined,
-        ...(editManager ? { [`_cr4c3_manager_value`]: editManager } : {}),
-        ...(editL2 ? { [`_cr4c3_l2manager_value`]: editL2 } : {}),
+        ...(editRole ? { cr4c3_role: Number(editRole) } : {}),
+        ...(editManager && editManager !== "none" ? { [`_cr4c3_manager_value`]: editManager } : {}),
+        ...(editL2 && editL2 !== "none" ? { [`_cr4c3_l2manager_value`]: editL2 } : {}),
       } as Partial<Cr4c3_userprofilesBase>,
     });
     setEditing(null);
+  };
+
+  const hashPassword = async (plain: string) => {
+    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(plain));
+    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
+  };
+
+  const handleAddUser = async () => {
+    setAddError("");
+    if (!addName.trim()) { setAddError("Full name is required."); return; }
+    if (!addEmail.trim() || !addEmail.includes("@")) { setAddError("Valid email is required."); return; }
+    if (!addPassword.trim()) { setAddError("Password is required."); return; }
+    if (!addRole) { setAddError("Role is required."); return; }
+    const hashed = await hashPassword(addPassword.trim());
+    await createUser.mutateAsync({
+      cr4c3_fullname: addName.trim(),
+      cr4c3_email: addEmail.trim().toLowerCase(),
+      cr4c3_password: hashed,
+      cr4c3_role: Number(addRole),
+    });
+    setAddOpen(false);
+    setAddName(""); setAddEmail(""); setAddPassword(""); setAddRole("");
   };
 
   return (
@@ -106,8 +137,19 @@ export function UsersPage() {
 
       <motion.div variants={itemVariants}>
         <GlassCard>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
+            <h3 className="text-sm font-semibold text-slate-300">Users ({filtered.length})</h3>
+            <Button size="sm" onClick={() => setAddOpen(true)}>
+              <Plus className="w-4 h-4 mr-1" />
+              Add User
+            </Button>
+          </div>
           {isLoading ? (
             <div className="p-4"><SkeletonTable rows={8} columns={4} /></div>
+          ) : filtered.length === 0 ? (
+            <div className="p-10 text-center text-slate-500 text-sm">
+              {search ? "No users match your search." : "No users yet. Click Add User to create the first profile."}
+            </div>
           ) : (
             <Table>
               <TableHeader>
@@ -194,6 +236,47 @@ export function UsersPage() {
             <Button variant="outline" onClick={() => setEditing(null)}>Cancel</Button>
             <Button onClick={saveEdit} disabled={updateUser.isPending}>
               {updateUser.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Add User dialog */}
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); setAddError(""); } }}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Add User</DialogTitle>
+          </DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5">
+              <Label>Full Name *</Label>
+              <Input placeholder="e.g. Jane Smith" value={addName} onChange={(e) => setAddName(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Email *</Label>
+              <Input type="email" placeholder="jane@example.com" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Password *</Label>
+              <Input type="password" placeholder="Initial password" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} />
+            </div>
+            <div className="space-y-1.5">
+              <Label>Role *</Label>
+              <Select value={addRole} onValueChange={setAddRole}>
+                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                <SelectContent>
+                  {Object.entries(USER_ROLE).map(([k, v]) => (
+                    <SelectItem key={k} value={String(v)}>{k.replace(/([A-Z])/g, " $1").trim()}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            {addError && <p className="text-xs text-red-400">{addError}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAddUser} disabled={createUser.isPending}>
+              {createUser.isPending ? "Creating…" : "Create User"}
             </Button>
           </DialogFooter>
         </DialogContent>

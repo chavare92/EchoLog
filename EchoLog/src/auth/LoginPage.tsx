@@ -9,7 +9,16 @@ import { Label } from "@/components/ui/label";
 import { useAuth } from "@/auth/AuthProvider";
 import { Cr4c3_userprofilesService } from "@/generated/services/Cr4c3_userprofilesService";
 import { sha256 } from "@/lib/utils";
-import { AlertCircle, Lock, Mail, Zap } from "lucide-react";
+import { AlertCircle, Lock, Mail, Zap, FlaskConical } from "lucide-react";
+import { USER_ROLE } from "@/lib/constants";
+
+// ─── Dev bypass ───────────────────────────────────────────────────────────────
+const DEV_USER = {
+  cr4c3_userprofileid: "dev-00000000-0000-0000-0000-000000000001",
+  cr4c3_fullname: "Dev Admin",
+  cr4c3_email: "test@echolog.dev",
+  cr4c3_role: USER_ROLE.Admin,
+};
 
 const loginSchema = z.object({
   email: z.string().email("Enter a valid email address"),
@@ -34,6 +43,14 @@ export function LoginPage() {
 
   const onSubmit = async (values: LoginFormValues) => {
     setError(null);
+
+    // ── Dev bypass: test@echolog.dev / test ──────────────────────────────────
+    if (values.email === "test@echolog.dev" && values.password === "test") {
+      login(DEV_USER);
+      navigate(from, { replace: true });
+      return;
+    }
+
     try {
       const result = await Cr4c3_userprofilesService.getAll({
         filter: `cr4c3_email eq '${values.email}'`,
@@ -54,8 +71,10 @@ export function LoginPage() {
         return;
       }
 
+      // Normalise stored hash — sha256sum appends "  -"; strip it
+      const storedHash = passwordField.trim().split(/\s/)[0].toLowerCase();
       const hashedInput = await sha256(values.password);
-      if (hashedInput !== passwordField) {
+      if (hashedInput !== storedHash) {
         setError("Incorrect password.");
         return;
       }
@@ -66,8 +85,9 @@ export function LoginPage() {
 
       login(safeUser);
       navigate(from, { replace: true });
-    } catch {
-      setError("Unable to sign in. Please try again.");
+    } catch (err) {
+      console.error("[EchoLog] Login error:", err);
+      setError(`Unable to sign in: ${err instanceof Error ? err.message : String(err)}`);
     }
   };
 
@@ -134,6 +154,21 @@ export function LoginPage() {
             {isSubmitting ? "Signing in…" : "Sign in"}
           </Button>
         </form>
+
+        {/* Dev shortcut */}
+        <div className="relative">
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/8" /></div>
+          <div className="relative flex justify-center text-xs"><span className="bg-[hsl(222,47%,8%)] px-2 text-slate-500">dev</span></div>
+        </div>
+        <Button
+          type="button"
+          variant="outline"
+          className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+          onClick={() => { login(DEV_USER); navigate(from, { replace: true }); }}
+        >
+          <FlaskConical className="w-4 h-4 mr-2" />
+          Quick Dev Login (Admin)
+        </Button>
 
         <p className="text-center text-xs text-slate-500">
           Azure Entra ID SSO coming soon · Contact IT for access issues
