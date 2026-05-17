@@ -15,6 +15,7 @@ import {
   CheckCircle,
   PlusCircle,
   Download,
+  Pencil,
 } from "lucide-react";
 import { currentUserAtom } from "@/store/authAtoms";
 import { useIncident, useUpdateIncident } from "@/hooks/useIncidents";
@@ -27,7 +28,7 @@ import { useProcesses } from "@/hooks/useProcesses";
 import { useTeams } from "@/hooks/useTeams";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { useRoleGuard } from "@/auth/useRoleGuard";
-import { INCIDENT_STATUS, RCA_STATUS, PA_STATUS } from "@/lib/constants";
+import { INCIDENT_STATUS, RCA_STATUS, PA_STATUS, SEVERITY } from "@/lib/constants";
 import { formatDateTime, formatDate, isOverdue, getRemainingTATMs, formatDuration } from "@/lib/utils";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -43,6 +44,7 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Label } from "@/components/ui/label";
 import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "sonner";
 
 const STATUS_STEPS = [
@@ -65,15 +67,19 @@ export function IncidentDetailPage() {
   const { data: paList } = usePreventiveActions(id);
   const { data: auditLogs } = useAuditLogs(id);
   const { data: departments } = useDepartments();
-  const { data: subdepts } = useSubdepartments(incident?._cr4c3_department_value);
-  const { data: processes } = useProcesses(incident?._cr4c3_subdepartment_value);
-  const { data: teams } = useTeams(incident?._cr4c3_process_value);
+  const { data: allSubdepts } = useSubdepartments(undefined, true);
+  const { data: allProcesses } = useProcesses(undefined, true);
+  const { data: allTeams } = useTeams(undefined, true);
   const { data: userProfiles } = useUserProfiles();
 
   const updateIncident = useUpdateIncident();
   const createRCA = useCreateRCA();
   const createPA = useCreatePA();
 
+  const [editDialogOpen, setEditDialogOpen] = useState(false);
+  const [editTitle, setEditTitle] = useState("");
+  const [editDesc, setEditDesc] = useState("");
+  const [editSeverity, setEditSeverity] = useState("");
   const [rcaDialogOpen, setRcaDialogOpen] = useState(false);
   const [paDialogOpen, setPaDialogOpen] = useState(false);
   const [rcaTitle, setRcaTitle] = useState("");
@@ -86,9 +92,9 @@ export function IncidentDetailPage() {
   if (!incident) return <div className="p-8 text-center text-gray-500">Incident not found.</div>;
 
   const getDeptName = (val?: string) => departments?.find((d) => d.cr4c3_departmentid === val)?.cr4c3_name;
-  const getSubdeptName = (val?: string) => subdepts?.find((s) => s.cr4c3_subdepartmentid === val)?.cr4c3_name;
-  const getProcessName = (val?: string) => processes?.find((p) => p.cr4c3_processid === val)?.cr4c3_name;
-  const getTeamName = (val?: string) => teams?.find((t) => t.cr4c3_teamid === val)?.cr4c3_name;
+  const getSubdeptName = (val?: string) => allSubdepts?.find((s) => s.cr4c3_subdepartmentid === val)?.cr4c3_name;
+  const getProcessName = (val?: string) => allProcesses?.find((p) => p.cr4c3_processid === val)?.cr4c3_name;
+  const getTeamName = (val?: string) => allTeams?.find((t) => t.cr4c3_teamid === val)?.cr4c3_name;
   const getUserName = (val?: string) => userProfiles?.find((u) => u.cr4c3_userprofileid === val)?.cr4c3_fullname;
 
   const statusIdx = STATUS_STEPS.findIndex((s) => s.key === incident.cr4c3_status);
@@ -96,8 +102,36 @@ export function IncidentDetailPage() {
   const remaining = incident.cr4c3_duedate ? getRemainingTATMs(incident.cr4c3_duedate) : null;
 
   const canSubmitRCA =
-    (incident.cr4c3_status === INCIDENT_STATUS.Open || incident.cr4c3_status === INCIDENT_STATUS.InvestigationPending) &&
+    (
+      incident.cr4c3_status === INCIDENT_STATUS.Open ||
+      incident.cr4c3_status === INCIDENT_STATUS.InvestigationPending ||
+      incident.cr4c3_status === INCIDENT_STATUS.RCARejected
+    ) &&
     (isAssignee || isAdmin);
+
+  const canEdit = isAdmin || isAssignee;
+
+  const openEditDialog = () => {
+    setEditTitle(incident.cr4c3_title ?? "");
+    setEditDesc(incident.cr4c3_description ?? "");
+    setEditSeverity(String(incident.cr4c3_severity ?? SEVERITY.Medium));
+    setEditDialogOpen(true);
+  };
+
+  const handleEditIncident = async () => {
+    if (!editTitle.trim()) { toast.error("Title is required"); return; }
+    await updateIncident.mutateAsync({
+      id: id!,
+      fields: {
+        cr4c3_title: editTitle.trim(),
+        cr4c3_description: editDesc.trim(),
+        cr4c3_severity: Number(editSeverity),
+        cr4c3_updatedat: new Date().toISOString(),
+      },
+    });
+    setEditDialogOpen(false);
+    toast.success("Incident updated");
+  };
 
   const canCreatePA = incident.cr4c3_status === INCIDENT_STATUS.RCAApproved && (isAdmin || isAssignee);
 
@@ -178,6 +212,12 @@ export function IncidentDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
+                {canEdit && (
+                  <Button variant="outline" size="sm" onClick={openEditDialog}>
+                    <Pencil className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                    Edit
+                  </Button>
+                )}
                 {!incident._cr4c3_assignee_value && (isAssignee || isAdmin) && (
                   <Button variant="outline" size="sm" onClick={handleAssignToMe}>
                     <UserCheck className="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -318,6 +358,30 @@ export function IncidentDetailPage() {
                       </div>
                     ))}
                   </dl>
+                  {incident._cr4c3_assignee_value && (() => {
+                    const assignee = userProfiles?.find((u) => u.cr4c3_userprofileid === incident._cr4c3_assignee_value);
+                    if (!assignee) return null;
+                    const parts = [
+                      getDeptName(assignee._cr4c3_department_value),
+                      getSubdeptName(assignee._cr4c3_subdepartment_value),
+                      getProcessName(assignee._cr4c3_process_value),
+                      getTeamName(assignee._cr4c3_team_value),
+                    ].filter(Boolean);
+                    if (parts.length === 0) return null;
+                    return (
+                      <div className="mt-3 pt-3 border-t border-gray-100">
+                        <p className="text-xs font-medium text-gray-500 mb-1.5">Assignee Org Path</p>
+                        <div className="flex flex-wrap items-center gap-1 text-xs text-gray-700">
+                          {parts.map((part, i) => (
+                            <span key={i} className="flex items-center gap-1">
+                              {i > 0 && <span className="text-gray-300" aria-hidden="true">›</span>}
+                              <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium">{part}</span>
+                            </span>
+                          ))}
+                        </div>
+                      </div>
+                    );
+                  })()}
                 </GlassCard>
 
                 {/* Timeline */}
@@ -458,6 +522,56 @@ export function IncidentDetailPage() {
           </TabsContent>
         </Tabs>
       </motion.div>
+
+      {/* Edit Incident Dialog */}
+      <Dialog open={editDialogOpen} onOpenChange={setEditDialogOpen}>
+        <DialogContent className="max-w-lg">
+          <DialogHeader>
+            <DialogTitle>Edit Incident</DialogTitle>
+            <DialogDescription>Update the incident title, description, or severity.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-4 my-2">
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-title">Title <span className="text-red-500" aria-hidden="true">*</span></Label>
+              <Input
+                id="edit-title"
+                value={editTitle}
+                onChange={(e) => setEditTitle(e.target.value)}
+                placeholder="Incident title…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-desc">Description</Label>
+              <Textarea
+                id="edit-desc"
+                value={editDesc}
+                onChange={(e) => setEditDesc(e.target.value)}
+                rows={4}
+                placeholder="Describe the incident…"
+              />
+            </div>
+            <div className="space-y-1.5">
+              <Label htmlFor="edit-severity">Severity</Label>
+              <Select value={editSeverity} onValueChange={setEditSeverity}>
+                <SelectTrigger id="edit-severity" aria-label="Severity">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={String(SEVERITY.Critical)}>Critical — 4h TAT</SelectItem>
+                  <SelectItem value={String(SEVERITY.High)}>High — 24h TAT</SelectItem>
+                  <SelectItem value={String(SEVERITY.Medium)}>Medium — 72h TAT</SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleEditIncident} disabled={updateIncident.isPending}>
+              {updateIncident.isPending ? "Saving…" : "Save Changes"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
 
       {/* Submit RCA Dialog */}
       <Dialog open={rcaDialogOpen} onOpenChange={setRcaDialogOpen}>

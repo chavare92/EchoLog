@@ -13,6 +13,7 @@ import { useTeams } from "@/hooks/useTeams";
 import { useCreateIncident, useIncidents } from "@/hooks/useIncidents";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { SEVERITY } from "@/lib/constants";
+import { calculateDueDate } from "@/lib/utils";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { StepIndicator } from "@/components/shared/StepIndicator";
@@ -107,13 +108,16 @@ export function LogIncidentPage() {
 
   const doSubmit = async (values: FormValues) => {
     const now = new Date().toISOString();
+    const dueDate = calculateDueDate(new Date(now), Number(values.severity)).toISOString();
     const created = await createIncident.mutateAsync({
       cr4c3_title: values.title,
       cr4c3_description: values.description,
       cr4c3_severity: Number(values.severity),
       cr4c3_status: 564060000,
+      cr4c3_ticketreference: ticketPreview,
       cr4c3_createdat: now,
       cr4c3_updatedat: now,
+      cr4c3_duedate: dueDate,
       _cr4c3_loggedby_value: user?.cr4c3_userprofileid,
       _cr4c3_department_value: values.departmentId,
       _cr4c3_subdepartment_value: values.subdepartmentId,

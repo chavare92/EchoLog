@@ -190,9 +190,9 @@ function DepartmentsTab() {
 
 function SubdepartmentsTab() {
   const { data: departments } = useDepartments();
-  const [selectedDept, setSelectedDept] = useState<string>("");
-  const effectiveDeptId = selectedDept && selectedDept !== "all" ? selectedDept : undefined;
-  const { data: subdepts, isLoading } = useSubdepartments(effectiveDeptId, selectedDept === "all");
+  const [selectedDept, setSelectedDept] = useState<string>("all");
+  const effectiveDeptId = selectedDept !== "all" ? selectedDept : undefined;
+  const { data: subdepts, isLoading } = useSubdepartments(effectiveDeptId, true);
   const createSubdept = useCreateSubdepartment();
   const updateSubdept = useUpdateSubdepartment();
   const deleteSubdept = useDeleteSubdepartment();
@@ -253,7 +253,7 @@ function SubdepartmentsTab() {
           <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
         ) : (subdepts ?? []).length === 0 ? (
           <div className="p-8 text-center text-gray-400 text-sm">
-            {selectedDept ? "No subdepartments for this filter." : "Select a department or choose All."}
+            {selectedDept && selectedDept !== "all" ? "No subdepartments for this department." : "No subdepartments found."}
           </div>
         ) : (
           <Table>
@@ -336,9 +336,9 @@ function SubdepartmentsTab() {
 
 function ProcessesTab() {
   const { data: subdepts } = useSubdepartments(undefined, true);
-  const [selectedSubdept, setSelectedSubdept] = useState<string>("");
-  const effectiveSubdeptId = selectedSubdept && selectedSubdept !== "all" ? selectedSubdept : undefined;
-  const { data: processes, isLoading } = useProcesses(effectiveSubdeptId, selectedSubdept === "all");
+  const [selectedSubdept, setSelectedSubdept] = useState<string>("all");
+  const effectiveSubdeptId = selectedSubdept !== "all" ? selectedSubdept : undefined;
+  const { data: processes, isLoading } = useProcesses(effectiveSubdeptId, true);
   const createProcess = useCreateProcess();
   const updateProcess = useUpdateProcess();
   const deleteProcess = useDeleteProcess();
@@ -399,7 +399,7 @@ function ProcessesTab() {
           <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
         ) : (processes ?? []).length === 0 ? (
           <div className="p-8 text-center text-gray-400 text-sm">
-            {selectedSubdept ? "No processes for this filter." : "Select a subdepartment or choose All."}
+            {selectedSubdept && selectedSubdept !== "all" ? "No processes for this subdepartment." : "No processes found."}
           </div>
         ) : (
           <Table>
@@ -482,9 +482,9 @@ function ProcessesTab() {
 
 function TeamsTab() {
   const { data: processes } = useProcesses(undefined, true);
-  const [selectedProcess, setSelectedProcess] = useState<string>("");
-  const effectiveProcessId = selectedProcess && selectedProcess !== "all" ? selectedProcess : undefined;
-  const { data: teams, isLoading } = useTeams(effectiveProcessId, selectedProcess === "all");
+  const [selectedProcess, setSelectedProcess] = useState<string>("all");
+  const effectiveProcessId = selectedProcess !== "all" ? selectedProcess : undefined;
+  const { data: teams, isLoading } = useTeams(effectiveProcessId, true);
   const createTeam = useCreateTeam();
   const updateTeam = useUpdateTeam();
   const deleteTeam = useDeleteTeam();
@@ -549,7 +549,7 @@ function TeamsTab() {
           <div className="p-4"><SkeletonTable rows={5} columns={4} /></div>
         ) : (teams ?? []).length === 0 ? (
           <div className="p-8 text-center text-gray-400 text-sm">
-            {selectedProcess ? "No teams for this filter." : "Select a process or choose All."}
+            {selectedProcess && selectedProcess !== "all" ? "No teams for this process." : "No teams found."}
           </div>
         ) : (
           <Table>
