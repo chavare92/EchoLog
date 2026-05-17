@@ -148,7 +148,7 @@ export function LoginPage() {
     try {
       const result = await Cr4c3_userprofilesService.getAll({
         filter: `cr4c3_email eq '${values.email}'`,
-        select: ["cr4c3_userprofileid", "cr4c3_fullname", "cr4c3_email", "cr4c3_role", "_cr4c3_department_value", "_cr4c3_team_value", "_cr4c3_manager_value", "_cr4c3_l2manager_value", "cr4c3_password", "cr4c3_failedloginattempts", "cr4c3_islocked"],
+        select: ["cr4c3_userprofileid", "cr4c3_fullname", "cr4c3_email", "cr4c3_role", "_cr4c3_department_value", "_cr4c3_team_value", "_cr4c3_manager_value", "_cr4c3_l2manager_value", "cr4c3_password", "cr4c3_failedloginattempts", "cr4c3_islocked", "cr4c3_isactive"],
       });
 
       const users = result.data ?? [];
@@ -159,6 +159,12 @@ export function LoginPage() {
 
       const user = users[0];
       const userRecord = user as Record<string, unknown>;
+
+      // ── Check active status ──────────────────────────────────────────────
+      if (userRecord["cr4c3_isactive"] === false) {
+        setError("Your account is inactive. Contact your administrator.");
+        return;
+      }
 
       // ── Check server-side lock flag ────────────────────────────────────────
       if (userRecord["cr4c3_islocked"] === true) {
@@ -172,9 +178,17 @@ export function LoginPage() {
         return;
       }
 
-      // Normalise stored hash — sha256sum appends "  -"; strip it
+      // Normalise stored hash — strip " -", lowercase, trim
       const storedHash = passwordField.trim().split(/\s/)[0].toLowerCase();
       const hashedInput = await sha256(values.password);
+
+      // DEBUG: Log comparison for troubleshooting mismatches
+      console.log("[EchoLog Auth Debug]", {
+        providedEmail: values.email,
+        inputHash: hashedInput,
+        storedHash: storedHash,
+        match: hashedInput === storedHash
+      });
 
       if (hashedInput !== storedHash) {
         const newCount = failedAttempts + 1;
