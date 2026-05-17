@@ -38,7 +38,7 @@ export function HierarchyPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 dark:text-gray-400">Admin access required.</p>
+        <p className="text-gray-500">Admin access required.</p>
       </div>
     );
   }
@@ -107,7 +107,7 @@ function DepartmentsTab() {
     <>
       <GlassCard>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Departments ({departments?.length ?? 0})</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Departments ({departments?.length ?? 0})</h3>
           <Button size="sm" onClick={() => { setErr(""); setAddOpen(true); }}><Plus className="w-4 h-4 mr-1" />Add</Button>
         </div>
         {isLoading ? (
@@ -235,7 +235,7 @@ function SubdepartmentsTab() {
     <>
       <GlassCard>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Subdepartments</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Subdepartments</h3>
           <div className="flex items-center gap-2">
             <Select value={selectedDept} onValueChange={setSelectedDept}>
               <SelectTrigger className="w-48"><SelectValue placeholder="Filter by department" /></SelectTrigger>
@@ -381,7 +381,7 @@ function ProcessesTab() {
     <>
       <GlassCard>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Processes</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Processes</h3>
           <div className="flex items-center gap-2">
             <Select value={selectedSubdept} onValueChange={setSelectedSubdept}>
               <SelectTrigger className="w-48"><SelectValue placeholder="Filter by subdept" /></SelectTrigger>
@@ -531,7 +531,7 @@ function TeamsTab() {
     <>
       <GlassCard>
         <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Teams</h3>
+          <h3 className="text-sm font-semibold text-gray-700">Teams</h3>
           <div className="flex items-center gap-2">
             <Select value={selectedProcess} onValueChange={setSelectedProcess}>
               <SelectTrigger className="w-48"><SelectValue placeholder="Filter by process" /></SelectTrigger>

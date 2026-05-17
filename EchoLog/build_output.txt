@@ -2,116 +2,67 @@
 > vite@0.0.0 build
 > tsc -b && vite build
 
-src/auth/LoginPage.tsx(43,28): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_userprofilesBase[]>'.
-src/components/layout/Sidebar.tsx(7,3): error TS6133: 'GitBranch' is declared but its value is never read.
-src/hooks/useAuditLogs.ts(16,9): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useAuditLogs.ts(18,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_auditlogsBase[]>'.
-src/hooks/useDepartments.ts(10,62): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useDepartments.ts(11,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_departmentsBase[]>'.
-src/hooks/useFishboneCauses.ts(14,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_fishbonecausesBase[]>'.
-src/hooks/useIncidents.ts(30,9): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useIncidents.ts(32,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_incidentsBase[]>'.
-src/hooks/useIncidents.ts(42,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_incidentsBase>'.
-src/hooks/useNotifications.ts(13,9): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useNotifications.ts(15,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_notificationsBase[]>'.
-src/hooks/usePreventiveActions.ts(12,76): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/usePreventiveActions.ts(13,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_preventiveactionsBase[]>'.
-src/hooks/usePreventiveActions.ts(23,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_preventiveactionsBase>'.
-src/hooks/useProcesses.ts(13,68): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useProcesses.ts(14,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_processesBase[]>'.
-src/hooks/useRCASubmissions.ts(12,73): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useRCASubmissions.ts(13,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_rcasubmissionsBase[]>'.
-src/hooks/useRCASubmissions.ts(23,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_rcasubmissionsBase>'.
-src/hooks/useSLARules.ts(12,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_slarulesBase[]>'.
-src/hooks/useSubdepartments.ts(13,73): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useSubdepartments.ts(14,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_subdepartmentsBase[]>'.
-src/hooks/useTeams.ts(13,64): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useTeams.ts(14,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_teamsBase[]>'.
-src/hooks/useUserProfiles.ts(11,63): error TS2561: Object literal may only specify known properties, but 'orderby' does not exist in type 'IGetAllOptions'. Did you mean to write 'orderBy'?
-src/hooks/useUserProfiles.ts(12,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_userprofilesBase[]>'.
-src/hooks/useUserProfiles.ts(23,21): error TS2339: Property 'value' does not exist on type 'IOperationResult<Cr4c3_userprofilesBase>'.
-src/pages/admin/HierarchyPage.tsx(3,1): error TS6192: All imports in import declaration are unused.
-src/pages/admin/HierarchyPage.tsx(12,1): error TS6133: 'Button' is declared but its value is never read.
-src/pages/admin/HierarchyPage.tsx(13,1): error TS6133: 'Input' is declared but its value is never read.
-src/pages/admin/HierarchyPage.tsx(14,1): error TS6133: 'Label' is declared but its value is never read.
-src/pages/admin/HierarchyPage.tsx(16,1): error TS6192: All imports in import declaration are unused.
-src/pages/admin/HierarchyPage.tsx(86,39): error TS7006: Parameter 'd' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(114,39): error TS7006: Parameter 'd' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(132,36): error TS7006: Parameter 's' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(136,39): error TS7006: Parameter 'd' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(163,36): error TS7006: Parameter 's' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(181,37): error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(185,36): error TS7006: Parameter 's' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(212,37): error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(230,33): error TS7006: Parameter 't' implicitly has an 'any' type.
-src/pages/admin/HierarchyPage.tsx(234,37): error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/pages/admin/SLARulesPage.tsx(15,7): error TS6133: 'SEVERITY_NAMES' is declared but its value is never read.
-src/pages/admin/SLARulesPage.tsx(77,37): error TS7006: Parameter 'rule' implicitly has an 'any' type.
-src/pages/admin/UsersPage.tsx(13,1): error TS6133: 'Badge' is declared but its value is never read.
-src/pages/admin/UsersPage.tsx(65,6): error TS7006: Parameter 'u' implicitly has an 'any' type.
-src/pages/admin/UsersPage.tsx(72,6): error TS7006: Parameter 'u' implicitly has an 'any' type.
-src/pages/admin/UsersPage.tsx(74,44): error TS7006: Parameter 'u' implicitly has an 'any' type.
-src/pages/admin/UsersPage.tsx(123,32): error TS7006: Parameter 'u' implicitly has an 'any' type.
-src/pages/admin/UsersPage.tsx(171,34): error TS7006: Parameter 'm' implicitly has an 'any' type.
-src/pages/admin/UsersPage.tsx(185,36): error TS7006: Parameter 'm' implicitly has an 'any' type.
-src/pages/audit/AuditTrailPage.tsx(17,9): error TS6133: 'user' is declared but its value is never read.
-src/pages/audit/AuditTrailPage.tsx(26,10): error TS7006: Parameter 'log' implicitly has an 'any' type.
-src/pages/audit/AuditTrailPage.tsx(38,25): error TS7006: Parameter 'u' implicitly has an 'any' type.
-src/pages/audit/AuditTrailPage.tsx(74,32): error TS7006: Parameter 'log' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(69,43): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(71,6): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(76,6): error TS7006: Parameter 'pa' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(78,51): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(149,45): error TS7006: Parameter 'inc' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(183,26): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(185,23): error TS7006: Parameter 'inc' implicitly has an 'any' type.
-src/pages/dashboard/DashboardPage.tsx(198,39): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/incidents/IncidentDetailPage.tsx(50,40): error TS7006: Parameter 'pa' implicitly has an 'any' type.
-src/pages/incidents/IncidentDetailPage.tsx(131,33): error TS7006: Parameter 'rca' implicitly has an 'any' type.
-src/pages/incidents/IncidentDetailPage.tsx(176,32): error TS7006: Parameter 'pa' implicitly has an 'any' type.
-src/pages/incidents/IncidentsListPage.tsx(29,38): error TS7006: Parameter 'inc' implicitly has an 'any' type.
-src/pages/incidents/IncidentsListPage.tsx(116,32): error TS7006: Parameter 'inc' implicitly has an 'any' type.
-src/pages/incidents/LogIncidentPage.tsx(79,9): error TS6133: 'titleWatch' is declared but its value is never read.
-src/pages/incidents/LogIncidentPage.tsx(82,46): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/incidents/LogIncidentPage.tsx(191,51): error TS7006: Parameter 'd' implicitly has an 'any' type.
-src/pages/incidents/LogIncidentPage.tsx(213,48): error TS7006: Parameter 's' implicitly has an 'any' type.
-src/pages/incidents/LogIncidentPage.tsx(235,49): error TS7006: Parameter 'p' implicitly has an 'any' type.
-src/pages/incidents/LogIncidentPage.tsx(257,45): error TS7006: Parameter 't' implicitly has an 'any' type.
-src/pages/notifications/NotificationsPage.tsx(3,10): error TS6133: 'Bell' is declared but its value is never read.
-src/pages/notifications/NotificationsPage.tsx(34,48): error TS7006: Parameter 'n' implicitly has an 'any' type.
-src/pages/notifications/NotificationsPage.tsx(35,46): error TS7006: Parameter 'n' implicitly has an 'any' type.
-src/pages/notifications/NotificationsPage.tsx(39,34): error TS2345: Argument of type 'string' is not assignable to parameter of type '{ id: string; readAt: string; }'.
-src/pages/notifications/NotificationsPage.tsx(51,47): error TS2345: Argument of type 'string | undefined' is not assignable to parameter of type 'string[]'.
-  Type 'undefined' is not assignable to type 'string[]'.
-src/pages/notifications/NotificationsPage.tsx(79,28): error TS7006: Parameter 'n' implicitly has an 'any' type.
-src/pages/notifications/NotificationsPage.tsx(111,26): error TS7006: Parameter 'n' implicitly has an 'any' type.
-src/pages/preventive-actions/CreatePAPage.tsx(46,6): error TS7006: Parameter 'u' implicitly has an 'any' type.
-src/pages/preventive-actions/CreatePAPage.tsx(106,47): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/preventive-actions/CreatePAPage.tsx(130,38): error TS7006: Parameter 'u' implicitly has an 'any' type.
-src/pages/preventive-actions/PADetailPage.tsx(15,1): error TS6133: 'Separator' is declared but its value is never read.
-src/pages/preventive-actions/PreventiveActionsListPage.tsx(29,10): error TS7006: Parameter 'pa' implicitly has an 'any' type.
-src/pages/preventive-actions/PreventiveActionsListPage.tsx(34,50): error TS7006: Parameter 'a' implicitly has an 'any' type.
-src/pages/preventive-actions/PreventiveActionsListPage.tsx(37,6): error TS7006: Parameter 'a' implicitly has an 'any' type.
-src/pages/preventive-actions/PreventiveActionsListPage.tsx(41,22): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/preventive-actions/PreventiveActionsListPage.tsx(107,26): error TS7006: Parameter 'pa' implicitly has an 'any' type.
-src/pages/rca/RCABuilderPage.tsx(15,3): error TS6133: 'useUpdateFishboneCause' is declared but its value is never read.
-src/pages/rca/RCABuilderPage.tsx(26,1): error TS6192: All imports in import declaration are unused.
-src/pages/rca/RCABuilderPage.tsx(124,42): error TS2339: Property 'PendingL1Review' does not exist on type '{ readonly Draft: 564060000; readonly Submitted: 564060001; readonly UnderReview: 564060002; readonly Approved: 564060003; readonly Rejected: 564060004; }'.
-src/pages/rca/RCABuilderPage.tsx(140,79): error TS7006: Parameter 'acc' implicitly has an 'any' type.
-src/pages/rca/RCABuilderPage.tsx(140,84): error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/pages/rca/RCABuilderPage.tsx(255,31): error TS2339: Property 'map' does not exist on type '{}'.
-src/pages/rca/RCABuilderPage.tsx(255,36): error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/pages/rca/RCABuilderPage.tsx(301,25): error TS6133: 'angle' is declared but its value is never read.
-src/pages/rca/RCABuilderPage.tsx(305,63): error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/pages/rca/RCABuilderPage.tsx(311,54): error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/pages/rca/RCABuilderPage.tsx(311,57): error TS7006: Parameter 'ci' implicitly has an 'any' type.
-src/pages/rca/RCABuilderPage.tsx(326,100): error TS7006: Parameter 'c' implicitly has an 'any' type.
-src/pages/review/ReviewQueuePage.tsx(8,22): error TS6133: 'INCIDENT_STATUS' is declared but its value is never read.
-src/pages/review/ReviewQueuePage.tsx(52,6): error TS7006: Parameter 'r' implicitly has an 'any' type.
-src/pages/review/ReviewQueuePage.tsx(53,37): error TS2339: Property 'PendingL1Review' does not exist on type '{ readonly Draft: 564060000; readonly Submitted: 564060001; readonly UnderReview: 564060002; readonly Approved: 564060003; readonly Rejected: 564060004; }'.
-src/pages/review/ReviewQueuePage.tsx(54,37): error TS2339: Property 'PendingL2Review' does not exist on type '{ readonly Draft: 564060000; readonly Submitted: 564060001; readonly UnderReview: 564060002; readonly Approved: 564060003; readonly Rejected: 564060004; }'.
-src/pages/review/ReviewQueuePage.tsx(58,22): error TS7006: Parameter 'i' implicitly has an 'any' type.
-src/pages/review/ReviewQueuePage.tsx(74,35): error TS7006: Parameter 'r' implicitly has an 'any' type.
-src/pages/review/ReviewQueuePage.tsx(80,41): error TS2339: Property 'PendingL1Review' does not exist on type '{ readonly Draft: 564060000; readonly Submitted: 564060001; readonly UnderReview: 564060002; readonly Approved: 564060003; readonly Rejected: 564060004; }'.
-src/pages/review/ReviewQueuePage.tsx(81,24): error TS2339: Property 'PendingL2Review' does not exist on type '{ readonly Draft: 564060000; readonly Submitted: 564060001; readonly UnderReview: 564060002; readonly Approved: 564060003; readonly Rejected: 564060004; }'.
-src/pages/review/ReviewQueuePage.tsx(115,29): error TS7006: Parameter 'rca' implicitly has an 'any' type.
+vite v7.3.3 building client environment for production...
+transforming...
+✓ 2534 modules transformed.
+rendering chunks...
+computing gzip size...
+dist/index.html                                      1.13 kB │ gzip:   0.57 kB
+dist/assets/index-OZ4Vd5Ws.css                      60.83 kB │ gzip:  11.32 kB
+dist/assets/plus-CRcqK2oT.js                         0.15 kB │ gzip:   0.15 kB
+dist/assets/arrow-right-BhZick4z.js                  0.17 kB │ gzip:   0.16 kB
+dist/assets/arrow-left-M2yIfMIZ.js                   0.17 kB │ gzip:   0.16 kB
+dist/assets/clock-BAlz-8P9.js                        0.17 kB │ gzip:   0.17 kB
+dist/assets/search-CfB5p8Yx.js                       0.18 kB │ gzip:   0.17 kB
+dist/assets/git-branch-DaDaMCAQ.js                   0.23 kB │ gzip:   0.19 kB
+dist/assets/user-check-BocNFvu2.js                   0.24 kB │ gzip:   0.21 kB
+dist/assets/pencil-BNZRc0Gt.js                       0.28 kB │ gzip:   0.23 kB
+dist/assets/file-exclamation-point-Cti3hsXf.js       0.31 kB │ gzip:   0.23 kB
+dist/assets/gavel-sexovqP1.js                        0.32 kB │ gzip:   0.22 kB
+dist/assets/trash-2-CbkbFlB6.js                      0.33 kB │ gzip:   0.21 kB
+dist/assets/TicketRef-sUP8ULic.js                    0.41 kB │ gzip:   0.27 kB
+dist/assets/triangle-alert-DK2bQVgR.js               0.41 kB │ gzip:   0.29 kB
+dist/assets/textarea-BoSOduWu.js                     0.46 kB │ gzip:   0.32 kB
+dist/assets/map-pin-CJ9szUnl.js                      0.60 kB │ gzip:   0.36 kB
+dist/assets/PulseIndicator-Mz-B1rSy.js               0.61 kB │ gzip:   0.32 kB
+dist/assets/separator-CElaE1Ut.js                    0.67 kB │ gzip:   0.40 kB
+dist/assets/TATCountdown-Nvy9uWrc.js                 0.68 kB │ gzip:   0.42 kB
+dist/assets/useUserProfiles-DX0GOipW.js              0.76 kB │ gzip:   0.40 kB
+dist/assets/badge-C_RtDKEc.js                        0.79 kB │ gzip:   0.39 kB
+dist/assets/SeverityBadge-DdRJPXmN.js                0.81 kB │ gzip:   0.41 kB
+dist/assets/Skeletons-DugYWlk8.js                    1.15 kB │ gzip:   0.47 kB
+dist/assets/useAuditLogs-Bzjrr8GW.js                 1.36 kB │ gzip:   0.65 kB
+dist/assets/table-CdbAc2BR.js                        1.49 kB │ gzip:   0.53 kB
+dist/assets/useRCASubmissions-C8RgMVTb.js            1.50 kB │ gzip:   0.62 kB
+dist/assets/useIncidents-CdIsGgTn.js                 1.61 kB │ gzip:   0.63 kB
+dist/assets/useDepartments-BR08Dx0U.js               1.66 kB │ gzip:   0.61 kB
+dist/assets/usePreventiveActions-BDbNHN3g.js         1.69 kB │ gzip:   0.68 kB
+dist/assets/useProcesses-D_pXWtQ8.js                 1.74 kB │ gzip:   0.67 kB
+dist/assets/useNotifications-DmfNolA8.js             1.78 kB │ gzip:   0.68 kB
+dist/assets/StatusBadge-DXiWSU77.js                  2.65 kB │ gzip:   0.70 kB
+dist/assets/useTeams-DqECoP9e.js                     3.34 kB │ gzip:   0.80 kB
+dist/assets/CreatePAPage-K7gZNsHF.js                 3.75 kB │ gzip:   1.43 kB
+dist/assets/NotificationsPage-Bd_0Nu2U.js            3.82 kB │ gzip:   1.40 kB
+dist/assets/tabs-JxvMbx6K.js                         5.85 kB │ gzip:   2.43 kB
+dist/assets/UsersPage-CBDZOPcn.js                    6.65 kB │ gzip:   2.22 kB
+dist/assets/AuditTrailPage-DgQip_G3.js               7.48 kB │ gzip:   2.53 kB
+dist/assets/SLARulesPage-B1iGvow4.js                 7.86 kB │ gzip:   2.88 kB
+dist/assets/ReviewQueuePage-C_UOHr7W.js              9.32 kB │ gzip:   3.30 kB
+dist/assets/IncidentsListPage-C4Zuh0dv.js            9.55 kB │ gzip:   3.38 kB
+dist/assets/PreventiveActionsListPage-CEMhvAuM.js    9.71 kB │ gzip:   3.06 kB
+dist/assets/dialog-5JNmLkI5.js                       9.86 kB │ gzip:   3.69 kB
+dist/assets/RCABuilderPage-E6t8EYmI.js              10.43 kB │ gzip:   3.62 kB
+dist/assets/GlassCard-BYD4UYOV.js                   11.91 kB │ gzip:   4.17 kB
+dist/assets/LogIncidentPage-BWsAyvbD.js             13.43 kB │ gzip:   4.05 kB
+dist/assets/DashboardPage-J8n8m8n4.js               13.67 kB │ gzip:   4.14 kB
+dist/assets/PADetailPage-bFgSz1bG.js                15.82 kB │ gzip:   4.89 kB
+dist/assets/HierarchyPage-C0G6TiO3.js               21.06 kB │ gzip:   3.07 kB
+dist/assets/IncidentDetailPage-CaNllICF.js          21.82 kB │ gzip:   5.43 kB
+dist/assets/select-BGptc91X.js                      23.31 kB │ gzip:   8.26 kB
+dist/assets/index-QmZxYka0.js                      748.04 kB │ gzip: 229.18 kB
+
+(!) Some chunks are larger than 500 kB after minification. Consider:
+- Using dynamic import() to code-split the application
+- Use build.rollupOptions.output.manualChunks to improve chunking: https://rollupjs.org/configuration-options/#output-manualchunks
+- Adjust chunk size limit for this warning via build.chunkSizeWarningLimit.
+✓ built in 9.03s

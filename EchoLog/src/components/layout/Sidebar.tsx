@@ -13,7 +13,6 @@ import {
   Users,
   Timer,
   Zap,
-  ChevronRight,
   PanelLeftClose,
   PanelLeftOpen,
   X,
@@ -59,7 +58,6 @@ export function Sidebar() {
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
   const setSidebarCollapsed = useSetAtom(sidebarCollapsedAtom);
 
-  const isVisible = isMobile ? mobileSidebarOpen : true;
   const isCollapsed = !isMobile && sidebarCollapsed;
 
   const handleNavClick = () => {
