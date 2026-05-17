@@ -1,11 +1,19 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus } from "lucide-react";
+import { Plus, Pencil, Trash2 } from "lucide-react";
 import { useRoleGuard } from "@/auth/useRoleGuard";
-import { useDepartments, useCreateDepartment } from "@/hooks/useDepartments";
-import { useSubdepartments, useCreateSubdepartment } from "@/hooks/useSubdepartments";
-import { useProcesses, useCreateProcess } from "@/hooks/useProcesses";
-import { useTeams, useCreateTeam } from "@/hooks/useTeams";
+import {
+  useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment,
+} from "@/hooks/useDepartments";
+import {
+  useSubdepartments, useCreateSubdepartment, useUpdateSubdepartment, useDeleteSubdepartment,
+} from "@/hooks/useSubdepartments";
+import {
+  useProcesses, useCreateProcess, useUpdateProcess, useDeleteProcess,
+} from "@/hooks/useProcesses";
+import {
+  useTeams, useCreateTeam, useUpdateTeam, useDeleteTeam,
+} from "@/hooks/useTeams";
 import { TEAM_SHIFT } from "@/lib/constants";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -17,12 +25,12 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import {
-  Dialog,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
+  Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle,
 } from "@/components/ui/dialog";
+import type { Cr4c3_departmentsBase } from "@/generated/models/Cr4c3_departmentsModel";
+import type { Cr4c3_subdepartmentsBase } from "@/generated/models/Cr4c3_subdepartmentsModel";
+import type { Cr4c3_processesBase } from "@/generated/models/Cr4c3_processesModel";
+import type { Cr4c3_teamsBase } from "@/generated/models/Cr4c3_teamsModel";
 
 export function HierarchyPage() {
   const { isAdmin } = useRoleGuard();
@@ -30,7 +38,7 @@ export function HierarchyPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">Admin access required.</p>
+        <p className="text-gray-500">Admin access required.</p>
       </div>
     );
   }
@@ -45,98 +53,140 @@ export function HierarchyPage() {
             <TabsTrigger value="processes">Processes</TabsTrigger>
             <TabsTrigger value="teams">Teams</TabsTrigger>
           </TabsList>
-
-          <TabsContent value="departments">
-            <DepartmentsTab />
-          </TabsContent>
-          <TabsContent value="subdepartments">
-            <SubdepartmentsTab />
-          </TabsContent>
-          <TabsContent value="processes">
-            <ProcessesTab />
-          </TabsContent>
-          <TabsContent value="teams">
-            <TeamsTab />
-          </TabsContent>
+          <TabsContent value="departments"><DepartmentsTab /></TabsContent>
+          <TabsContent value="subdepartments"><SubdepartmentsTab /></TabsContent>
+          <TabsContent value="processes"><ProcessesTab /></TabsContent>
+          <TabsContent value="teams"><TeamsTab /></TabsContent>
         </Tabs>
       </motion.div>
     </PageWrapper>
   );
 }
 
+// ── Departments ────────────────────────────────────────────────────────────────
+
 function DepartmentsTab() {
   const { data: departments, isLoading } = useDepartments();
   const createDept = useCreateDepartment();
-  const [open, setOpen] = useState(false);
+  const updateDept = useUpdateDepartment();
+  const deleteDept = useDeleteDepartment();
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState<Cr4c3_departmentsBase | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [err, setErr] = useState("");
 
   const handleAdd = async () => {
     setErr("");
     if (!name.trim()) { setErr("Name is required."); return; }
     await createDept.mutateAsync({ cr4c3_name: name.trim(), cr4c3_description: desc.trim() || undefined });
-    setOpen(false); setName(""); setDesc("");
+    setAddOpen(false); setName(""); setDesc("");
+  };
+
+  const openEdit = (d: Cr4c3_departmentsBase) => {
+    setEditItem(d); setEditName(d.cr4c3_name ?? ""); setEditDesc(d.cr4c3_description ?? ""); setErr("");
+  };
+
+  const handleEdit = async () => {
+    setErr("");
+    if (!editName.trim()) { setErr("Name is required."); return; }
+    await updateDept.mutateAsync({ id: editItem!.cr4c3_departmentid!, fields: { cr4c3_name: editName.trim(), cr4c3_description: editDesc.trim() || undefined } });
+    setEditItem(null);
+  };
+
+  const handleDelete = async () => {
+    await deleteDept.mutateAsync(deleteId!);
+    setDeleteId(null);
   };
 
   return (
     <>
-    <GlassCard>
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-        <h3 className="text-sm font-semibold text-slate-300">Departments ({departments?.length ?? 0})</h3>
-        <div className="flex items-center gap-2">
-          <p className="text-xs text-slate-500">Managed in Dataverse</p>
-          <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Add</Button>
+      <GlassCard>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700">Departments ({departments?.length ?? 0})</h3>
+          <Button size="sm" onClick={() => { setErr(""); setAddOpen(true); }}><Plus className="w-4 h-4 mr-1" />Add</Button>
         </div>
-      </div>
-      {isLoading ? (
-        <div className="p-4"><SkeletonTable rows={5} columns={2} /></div>
-      ) : (departments ?? []).length === 0 ? (
-        <div className="p-8 text-center text-slate-500 text-sm">No departments yet.</div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
+        {isLoading ? (
+          <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
+        ) : (departments ?? []).length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm">No departments yet.</div>
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Description</TableHead>
-              <TableHead>ID</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(departments ?? []).map((d) => (
-              <TableRow key={d.cr4c3_departmentid}>
-                <TableCell className="text-slate-200">{d.cr4c3_name}</TableCell>
-                <TableCell className="text-xs text-slate-400">{d.cr4c3_description ?? "—"}</TableCell>
-                <TableCell className="font-mono text-xs text-slate-500">{d.cr4c3_departmentid}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </GlassCard>
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setOpen(false); setErr(""); } }}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add Department</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Name *</Label>
-            <Input placeholder="e.g. Operations" value={name} onChange={(e) => setName(e.target.value)} />
+              <TableHead className="w-24 text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {(departments ?? []).map((d) => (
+                <TableRow key={d.cr4c3_departmentid}>
+                  <TableCell className="font-medium text-gray-900">{d.cr4c3_name}</TableCell>
+                  <TableCell className="text-sm text-gray-500">{d.cr4c3_description ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(d)}>
+                        <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteId(d.cr4c3_departmentid!)}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </GlassCard>
+
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Department</DialogTitle><DialogDescription>Create a new department in Dataverse.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input placeholder="e.g. Operations" value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Description</Label><Input placeholder="Optional" value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
           </div>
-          <div className="space-y-1.5">
-            <Label>Description</Label>
-            <Input placeholder="Optional description" value={desc} onChange={(e) => setDesc(e.target.value)} />
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAdd} disabled={createDept.isPending}>{createDept.isPending ? "Saving…" : "Add"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) { setEditItem(null); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Department</DialogTitle><DialogDescription>Update department details.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Description</Label><Input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} /></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
           </div>
-          {err && <p className="text-xs text-red-400">{err}</p>}
-        </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAdd} disabled={createDept.isPending}>{createDept.isPending ? "Saving…" : "Add"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={updateDept.isPending}>{updateDept.isPending ? "Saving…" : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete Department</DialogTitle><DialogDescription>This cannot be undone. Are you sure?</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteDept.isPending}>{deleteDept.isPending ? "Deleting…" : "Delete"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
+// ── Subdepartments ─────────────────────────────────────────────────────────────
 
 function SubdepartmentsTab() {
   const { data: departments } = useDepartments();
@@ -144,107 +194,145 @@ function SubdepartmentsTab() {
   const effectiveDeptId = selectedDept && selectedDept !== "all" ? selectedDept : undefined;
   const { data: subdepts, isLoading } = useSubdepartments(effectiveDeptId, selectedDept === "all");
   const createSubdept = useCreateSubdepartment();
-  const [open, setOpen] = useState(false);
+  const updateSubdept = useUpdateSubdepartment();
+  const deleteSubdept = useDeleteSubdepartment();
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState<Cr4c3_subdepartmentsBase | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [deptId, setDeptId] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [err, setErr] = useState("");
 
   const handleAdd = async () => {
     setErr("");
     if (!name.trim()) { setErr("Name is required."); return; }
     if (!deptId) { setErr("Department is required."); return; }
-    await createSubdept.mutateAsync({
-      cr4c3_name: name.trim(),
-      cr4c3_description: desc.trim() || undefined,
-      [`_cr4c3_department_value`]: deptId,
-    } as never);
-    setOpen(false); setName(""); setDesc(""); setDeptId("");
+    await createSubdept.mutateAsync({ cr4c3_name: name.trim(), cr4c3_description: desc.trim() || undefined, _cr4c3_department_value: deptId });
+    setAddOpen(false); setName(""); setDesc(""); setDeptId("");
+  };
+
+  const openEdit = (s: Cr4c3_subdepartmentsBase) => {
+    setEditItem(s); setEditName(s.cr4c3_name ?? ""); setEditDesc(s.cr4c3_description ?? ""); setErr("");
+  };
+
+  const handleEdit = async () => {
+    setErr("");
+    if (!editName.trim()) { setErr("Name is required."); return; }
+    await updateSubdept.mutateAsync({ id: editItem!.cr4c3_subdepartmentid!, fields: { cr4c3_name: editName.trim(), cr4c3_description: editDesc.trim() || undefined } });
+    setEditItem(null);
+  };
+
+  const handleDelete = async () => {
+    await deleteSubdept.mutateAsync(deleteId!);
+    setDeleteId(null);
   };
 
   return (
     <>
-    <GlassCard>
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-        <h3 className="text-sm font-semibold text-slate-300">Subdepartments</h3>
-        <div className="flex items-center gap-2">
-          <Select value={selectedDept} onValueChange={setSelectedDept}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by department" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Departments</SelectItem>
-              {(departments ?? []).map((d) => (
-                <SelectItem key={d.cr4c3_departmentid} value={d.cr4c3_departmentid!}>{d.cr4c3_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Add</Button>
-        </div>
-      </div>
-      {isLoading ? (
-        <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
-      ) : (subdepts ?? []).length === 0 ? (
-        <div className="p-8 text-center text-slate-500 text-sm">
-          {selectedDept ? "No subdepartments for this department." : "Select a department or choose All Departments."}
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Department</TableHead>
-              <TableHead>ID</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(subdepts ?? []).map((s) => (
-              <TableRow key={s.cr4c3_subdepartmentid}>
-                <TableCell className="text-slate-200">{s.cr4c3_name}</TableCell>
-                <TableCell className="text-xs text-slate-400">
-                  {departments?.find((d) => d.cr4c3_departmentid === s._cr4c3_department_value)?.cr4c3_name ?? "—"}
-                </TableCell>
-                <TableCell className="font-mono text-xs text-slate-500">{s.cr4c3_subdepartmentid}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </GlassCard>
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setOpen(false); setErr(""); } }}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add Subdepartment</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Name *</Label>
-            <Input placeholder="e.g. Quality Assurance" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Department *</Label>
-            <Select value={deptId} onValueChange={setDeptId}>
-              <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+      <GlassCard>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700">Subdepartments</h3>
+          <div className="flex items-center gap-2">
+            <Select value={selectedDept} onValueChange={setSelectedDept}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="Filter by department" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Departments</SelectItem>
                 {(departments ?? []).map((d) => (
                   <SelectItem key={d.cr4c3_departmentid} value={d.cr4c3_departmentid!}>{d.cr4c3_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button size="sm" onClick={() => { setErr(""); setAddOpen(true); }}><Plus className="w-4 h-4 mr-1" />Add</Button>
           </div>
-          <div className="space-y-1.5">
-            <Label>Description</Label>
-            <Input placeholder="Optional" value={desc} onChange={(e) => setDesc(e.target.value)} />
-          </div>
-          {err && <p className="text-xs text-red-400">{err}</p>}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAdd} disabled={createSubdept.isPending}>{createSubdept.isPending ? "Saving…" : "Add"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {isLoading ? (
+          <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
+        ) : (subdepts ?? []).length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm">
+            {selectedDept ? "No subdepartments for this filter." : "Select a department or choose All."}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Department</TableHead>
+              <TableHead className="w-24 text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {(subdepts ?? []).map((s) => (
+                <TableRow key={s.cr4c3_subdepartmentid}>
+                  <TableCell className="font-medium text-gray-900">{s.cr4c3_name}</TableCell>
+                  <TableCell className="text-sm text-gray-500">{departments?.find((d) => d.cr4c3_departmentid === s._cr4c3_department_value)?.cr4c3_name ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(s)}>
+                        <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteId(s.cr4c3_subdepartmentid!)}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </GlassCard>
+
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Subdepartment</DialogTitle><DialogDescription>Create a new subdepartment.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input placeholder="e.g. Quality Assurance" value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Department *</Label>
+              <Select value={deptId} onValueChange={setDeptId}>
+                <SelectTrigger><SelectValue placeholder="Select department" /></SelectTrigger>
+                <SelectContent>{(departments ?? []).map((d) => <SelectItem key={d.cr4c3_departmentid} value={d.cr4c3_departmentid!}>{d.cr4c3_name}</SelectItem>)}</SelectContent>
+              </Select></div>
+            <div className="space-y-1.5"><Label>Description</Label><Input placeholder="Optional" value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAdd} disabled={createSubdept.isPending}>{createSubdept.isPending ? "Saving…" : "Add"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) { setEditItem(null); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Subdepartment</DialogTitle><DialogDescription>Update subdepartment details.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Description</Label><Input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} /></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={updateSubdept.isPending}>{updateSubdept.isPending ? "Saving…" : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete Subdepartment</DialogTitle><DialogDescription>This cannot be undone.</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteSubdept.isPending}>{deleteSubdept.isPending ? "Deleting…" : "Delete"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
+// ── Processes ──────────────────────────────────────────────────────────────────
 
 function ProcessesTab() {
   const { data: subdepts } = useSubdepartments(undefined, true);
@@ -252,107 +340,145 @@ function ProcessesTab() {
   const effectiveSubdeptId = selectedSubdept && selectedSubdept !== "all" ? selectedSubdept : undefined;
   const { data: processes, isLoading } = useProcesses(effectiveSubdeptId, selectedSubdept === "all");
   const createProcess = useCreateProcess();
-  const [open, setOpen] = useState(false);
+  const updateProcess = useUpdateProcess();
+  const deleteProcess = useDeleteProcess();
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState<Cr4c3_processesBase | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [desc, setDesc] = useState("");
   const [subdeptId, setSubdeptId] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editDesc, setEditDesc] = useState("");
   const [err, setErr] = useState("");
 
   const handleAdd = async () => {
     setErr("");
     if (!name.trim()) { setErr("Name is required."); return; }
     if (!subdeptId) { setErr("Subdepartment is required."); return; }
-    await createProcess.mutateAsync({
-      cr4c3_name: name.trim(),
-      cr4c3_description: desc.trim() || undefined,
-      [`_cr4c3_subdepartment_value`]: subdeptId,
-    } as never);
-    setOpen(false); setName(""); setDesc(""); setSubdeptId("");
+    await createProcess.mutateAsync({ cr4c3_name: name.trim(), cr4c3_description: desc.trim() || undefined, _cr4c3_subdepartment_value: subdeptId });
+    setAddOpen(false); setName(""); setDesc(""); setSubdeptId("");
+  };
+
+  const openEdit = (p: Cr4c3_processesBase) => {
+    setEditItem(p); setEditName(p.cr4c3_name ?? ""); setEditDesc(p.cr4c3_description ?? ""); setErr("");
+  };
+
+  const handleEdit = async () => {
+    setErr("");
+    if (!editName.trim()) { setErr("Name is required."); return; }
+    await updateProcess.mutateAsync({ id: editItem!.cr4c3_processid!, fields: { cr4c3_name: editName.trim(), cr4c3_description: editDesc.trim() || undefined } });
+    setEditItem(null);
+  };
+
+  const handleDelete = async () => {
+    await deleteProcess.mutateAsync(deleteId!);
+    setDeleteId(null);
   };
 
   return (
     <>
-    <GlassCard>
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-        <h3 className="text-sm font-semibold text-slate-300">Processes</h3>
-        <div className="flex items-center gap-2">
-          <Select value={selectedSubdept} onValueChange={setSelectedSubdept}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by subdept" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Subdepartments</SelectItem>
-              {(subdepts ?? []).map((s) => (
-                <SelectItem key={s.cr4c3_subdepartmentid} value={s.cr4c3_subdepartmentid!}>{s.cr4c3_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Add</Button>
-        </div>
-      </div>
-      {isLoading ? (
-        <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
-      ) : (processes ?? []).length === 0 ? (
-        <div className="p-8 text-center text-slate-500 text-sm">
-          {selectedSubdept ? "No processes for this subdepartment." : "Select a subdepartment or choose All."}
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Subdepartment</TableHead>
-              <TableHead>ID</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(processes ?? []).map((p) => (
-              <TableRow key={p.cr4c3_processid}>
-                <TableCell className="text-slate-200">{p.cr4c3_name}</TableCell>
-                <TableCell className="text-xs text-slate-400">
-                  {subdepts?.find((s) => s.cr4c3_subdepartmentid === p._cr4c3_subdepartment_value)?.cr4c3_name ?? "—"}
-                </TableCell>
-                <TableCell className="font-mono text-xs text-slate-500">{p.cr4c3_processid}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </GlassCard>
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setOpen(false); setErr(""); } }}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add Process</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Name *</Label>
-            <Input placeholder="e.g. Incident Review" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Subdepartment *</Label>
-            <Select value={subdeptId} onValueChange={setSubdeptId}>
-              <SelectTrigger><SelectValue placeholder="Select subdepartment" /></SelectTrigger>
+      <GlassCard>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700">Processes</h3>
+          <div className="flex items-center gap-2">
+            <Select value={selectedSubdept} onValueChange={setSelectedSubdept}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="Filter by subdept" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Subdepartments</SelectItem>
                 {(subdepts ?? []).map((s) => (
                   <SelectItem key={s.cr4c3_subdepartmentid} value={s.cr4c3_subdepartmentid!}>{s.cr4c3_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button size="sm" onClick={() => { setErr(""); setAddOpen(true); }}><Plus className="w-4 h-4 mr-1" />Add</Button>
           </div>
-          <div className="space-y-1.5">
-            <Label>Description</Label>
-            <Input placeholder="Optional" value={desc} onChange={(e) => setDesc(e.target.value)} />
-          </div>
-          {err && <p className="text-xs text-red-400">{err}</p>}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAdd} disabled={createProcess.isPending}>{createProcess.isPending ? "Saving…" : "Add"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {isLoading ? (
+          <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
+        ) : (processes ?? []).length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm">
+            {selectedSubdept ? "No processes for this filter." : "Select a subdepartment or choose All."}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Subdepartment</TableHead>
+              <TableHead className="w-24 text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {(processes ?? []).map((p) => (
+                <TableRow key={p.cr4c3_processid}>
+                  <TableCell className="font-medium text-gray-900">{p.cr4c3_name}</TableCell>
+                  <TableCell className="text-sm text-gray-500">{subdepts?.find((s) => s.cr4c3_subdepartmentid === p._cr4c3_subdepartment_value)?.cr4c3_name ?? "—"}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(p)}>
+                        <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteId(p.cr4c3_processid!)}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </GlassCard>
+
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Process</DialogTitle><DialogDescription>Create a new process.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input placeholder="e.g. Incident Review" value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Subdepartment *</Label>
+              <Select value={subdeptId} onValueChange={setSubdeptId}>
+                <SelectTrigger><SelectValue placeholder="Select subdepartment" /></SelectTrigger>
+                <SelectContent>{(subdepts ?? []).map((s) => <SelectItem key={s.cr4c3_subdepartmentid} value={s.cr4c3_subdepartmentid!}>{s.cr4c3_name}</SelectItem>)}</SelectContent>
+              </Select></div>
+            <div className="space-y-1.5"><Label>Description</Label><Input placeholder="Optional" value={desc} onChange={(e) => setDesc(e.target.value)} /></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAdd} disabled={createProcess.isPending}>{createProcess.isPending ? "Saving…" : "Add"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) { setEditItem(null); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Process</DialogTitle><DialogDescription>Update process details.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Description</Label><Input value={editDesc} onChange={(e) => setEditDesc(e.target.value)} /></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={updateProcess.isPending}>{updateProcess.isPending ? "Saving…" : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete Process</DialogTitle><DialogDescription>This cannot be undone.</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteProcess.isPending}>{deleteProcess.isPending ? "Deleting…" : "Delete"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }
+
+// ── Teams ──────────────────────────────────────────────────────────────────────
 
 function TeamsTab() {
   const { data: processes } = useProcesses(undefined, true);
@@ -360,116 +486,162 @@ function TeamsTab() {
   const effectiveProcessId = selectedProcess && selectedProcess !== "all" ? selectedProcess : undefined;
   const { data: teams, isLoading } = useTeams(effectiveProcessId, selectedProcess === "all");
   const createTeam = useCreateTeam();
-  const [open, setOpen] = useState(false);
+  const updateTeam = useUpdateTeam();
+  const deleteTeam = useDeleteTeam();
+
+  const [addOpen, setAddOpen] = useState(false);
+  const [editItem, setEditItem] = useState<Cr4c3_teamsBase | null>(null);
+  const [deleteId, setDeleteId] = useState<string | null>(null);
   const [name, setName] = useState("");
   const [processId, setProcessId] = useState("");
   const [shift, setShift] = useState("");
+  const [editName, setEditName] = useState("");
+  const [editShift, setEditShift] = useState("");
   const [err, setErr] = useState("");
+
+  const shiftLabel = (v?: number | null) =>
+    v === TEAM_SHIFT.Morning ? "Morning" : v === TEAM_SHIFT.Evening ? "Evening" : v === TEAM_SHIFT.Night ? "Night" : "—";
 
   const handleAdd = async () => {
     setErr("");
     if (!name.trim()) { setErr("Name is required."); return; }
     if (!processId) { setErr("Process is required."); return; }
     if (!shift) { setErr("Shift is required."); return; }
-    await createTeam.mutateAsync({
-      cr4c3_name: name.trim(),
-      cr4c3_shift: Number(shift),
-      [`_cr4c3_process_value`]: processId,
-    } as never);
-    setOpen(false); setName(""); setProcessId(""); setShift("");
+    await createTeam.mutateAsync({ cr4c3_name: name.trim(), cr4c3_shift: Number(shift), _cr4c3_process_value: processId });
+    setAddOpen(false); setName(""); setProcessId(""); setShift("");
+  };
+
+  const openEdit = (t: Cr4c3_teamsBase) => {
+    setEditItem(t); setEditName(t.cr4c3_name ?? ""); setEditShift(String(t.cr4c3_shift ?? "")); setErr("");
+  };
+
+  const handleEdit = async () => {
+    setErr("");
+    if (!editName.trim()) { setErr("Name is required."); return; }
+    await updateTeam.mutateAsync({ id: editItem!.cr4c3_teamid!, fields: { cr4c3_name: editName.trim(), cr4c3_shift: Number(editShift) } });
+    setEditItem(null);
+  };
+
+  const handleDelete = async () => {
+    await deleteTeam.mutateAsync(deleteId!);
+    setDeleteId(null);
   };
 
   return (
     <>
-    <GlassCard>
-      <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-        <h3 className="text-sm font-semibold text-slate-300">Teams</h3>
-        <div className="flex items-center gap-2">
-          <Select value={selectedProcess} onValueChange={setSelectedProcess}>
-            <SelectTrigger className="w-48">
-              <SelectValue placeholder="Filter by process" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">All Processes</SelectItem>
-              {(processes ?? []).map((p) => (
-                <SelectItem key={p.cr4c3_processid} value={p.cr4c3_processid!}>{p.cr4c3_name}</SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-          <Button size="sm" onClick={() => setOpen(true)}><Plus className="w-4 h-4 mr-1" />Add</Button>
-        </div>
-      </div>
-      {isLoading ? (
-        <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
-      ) : (teams ?? []).length === 0 ? (
-        <div className="p-8 text-center text-slate-500 text-sm">
-          {selectedProcess ? "No teams for this process." : "Select a process or choose All."}
-        </div>
-      ) : (
-        <Table>
-          <TableHeader>
-            <TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Process</TableHead>
-              <TableHead>Shift</TableHead>
-              <TableHead>ID</TableHead>
-            </TableRow>
-          </TableHeader>
-          <TableBody>
-            {(teams ?? []).map((t) => (
-              <TableRow key={t.cr4c3_teamid}>
-                <TableCell className="text-slate-200">{t.cr4c3_name}</TableCell>
-                <TableCell className="text-xs text-slate-400">
-                  {processes?.find((p) => p.cr4c3_processid === t._cr4c3_process_value)?.cr4c3_name ?? "—"}
-                </TableCell>
-                <TableCell className="text-xs text-slate-400">
-                  {t.cr4c3_shift === TEAM_SHIFT.Morning ? "Morning" : t.cr4c3_shift === TEAM_SHIFT.Evening ? "Evening" : t.cr4c3_shift === TEAM_SHIFT.Night ? "Night" : "—"}
-                </TableCell>
-                <TableCell className="font-mono text-xs text-slate-500">{t.cr4c3_teamid}</TableCell>
-              </TableRow>
-            ))}
-          </TableBody>
-        </Table>
-      )}
-    </GlassCard>
-    <Dialog open={open} onOpenChange={(o) => { if (!o) { setOpen(false); setErr(""); } }}>
-      <DialogContent>
-        <DialogHeader><DialogTitle>Add Team</DialogTitle></DialogHeader>
-        <div className="space-y-4">
-          <div className="space-y-1.5">
-            <Label>Name *</Label>
-            <Input placeholder="e.g. Alpha Team" value={name} onChange={(e) => setName(e.target.value)} />
-          </div>
-          <div className="space-y-1.5">
-            <Label>Process *</Label>
-            <Select value={processId} onValueChange={setProcessId}>
-              <SelectTrigger><SelectValue placeholder="Select process" /></SelectTrigger>
+      <GlassCard>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+          <h3 className="text-sm font-semibold text-gray-700">Teams</h3>
+          <div className="flex items-center gap-2">
+            <Select value={selectedProcess} onValueChange={setSelectedProcess}>
+              <SelectTrigger className="w-48"><SelectValue placeholder="Filter by process" /></SelectTrigger>
               <SelectContent>
+                <SelectItem value="all">All Processes</SelectItem>
                 {(processes ?? []).map((p) => (
                   <SelectItem key={p.cr4c3_processid} value={p.cr4c3_processid!}>{p.cr4c3_name}</SelectItem>
                 ))}
               </SelectContent>
             </Select>
+            <Button size="sm" onClick={() => { setErr(""); setAddOpen(true); }}><Plus className="w-4 h-4 mr-1" />Add</Button>
           </div>
-          <div className="space-y-1.5">
-            <Label>Shift *</Label>
-            <Select value={shift} onValueChange={setShift}>
-              <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
-              <SelectContent>
-                <SelectItem value={String(TEAM_SHIFT.Morning)}>Morning</SelectItem>
-                <SelectItem value={String(TEAM_SHIFT.Evening)}>Evening</SelectItem>
-                <SelectItem value={String(TEAM_SHIFT.Night)}>Night</SelectItem>
-              </SelectContent>
-            </Select>
-          </div>
-          {err && <p className="text-xs text-red-400">{err}</p>}
         </div>
-        <DialogFooter>
-          <Button variant="outline" onClick={() => setOpen(false)}>Cancel</Button>
-          <Button onClick={handleAdd} disabled={createTeam.isPending}>{createTeam.isPending ? "Saving…" : "Add"}</Button>
-        </DialogFooter>
-      </DialogContent>
-    </Dialog>
+        {isLoading ? (
+          <div className="p-4"><SkeletonTable rows={5} columns={4} /></div>
+        ) : (teams ?? []).length === 0 ? (
+          <div className="p-8 text-center text-gray-400 text-sm">
+            {selectedProcess ? "No teams for this filter." : "Select a process or choose All."}
+          </div>
+        ) : (
+          <Table>
+            <TableHeader><TableRow>
+              <TableHead>Name</TableHead>
+              <TableHead>Process</TableHead>
+              <TableHead>Shift</TableHead>
+              <TableHead className="w-24 text-right">Actions</TableHead>
+            </TableRow></TableHeader>
+            <TableBody>
+              {(teams ?? []).map((t) => (
+                <TableRow key={t.cr4c3_teamid}>
+                  <TableCell className="font-medium text-gray-900">{t.cr4c3_name}</TableCell>
+                  <TableCell className="text-sm text-gray-500">{processes?.find((p) => p.cr4c3_processid === t._cr4c3_process_value)?.cr4c3_name ?? "—"}</TableCell>
+                  <TableCell className="text-sm text-gray-500">{shiftLabel(t.cr4c3_shift)}</TableCell>
+                  <TableCell className="text-right">
+                    <div className="flex items-center justify-end gap-1">
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(t)}>
+                        <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                      </Button>
+                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteId(t.cr4c3_teamid!)}>
+                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                      </Button>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </GlassCard>
+
+      <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Add Team</DialogTitle><DialogDescription>Create a new team.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input placeholder="e.g. Alpha Team" value={name} onChange={(e) => setName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Process *</Label>
+              <Select value={processId} onValueChange={setProcessId}>
+                <SelectTrigger><SelectValue placeholder="Select process" /></SelectTrigger>
+                <SelectContent>{(processes ?? []).map((p) => <SelectItem key={p.cr4c3_processid} value={p.cr4c3_processid!}>{p.cr4c3_name}</SelectItem>)}</SelectContent>
+              </Select></div>
+            <div className="space-y-1.5"><Label>Shift *</Label>
+              <Select value={shift} onValueChange={setShift}>
+                <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={String(TEAM_SHIFT.Morning)}>Morning</SelectItem>
+                  <SelectItem value={String(TEAM_SHIFT.Evening)}>Evening</SelectItem>
+                  <SelectItem value={String(TEAM_SHIFT.Night)}>Night</SelectItem>
+                </SelectContent>
+              </Select></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
+            <Button onClick={handleAdd} disabled={createTeam.isPending}>{createTeam.isPending ? "Saving…" : "Add"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!editItem} onOpenChange={(o) => { if (!o) { setEditItem(null); setErr(""); } }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Edit Team</DialogTitle><DialogDescription>Update team details.</DialogDescription></DialogHeader>
+          <div className="space-y-4">
+            <div className="space-y-1.5"><Label>Name *</Label><Input value={editName} onChange={(e) => setEditName(e.target.value)} /></div>
+            <div className="space-y-1.5"><Label>Shift</Label>
+              <Select value={editShift} onValueChange={setEditShift}>
+                <SelectTrigger><SelectValue placeholder="Select shift" /></SelectTrigger>
+                <SelectContent>
+                  <SelectItem value={String(TEAM_SHIFT.Morning)}>Morning</SelectItem>
+                  <SelectItem value={String(TEAM_SHIFT.Evening)}>Evening</SelectItem>
+                  <SelectItem value={String(TEAM_SHIFT.Night)}>Night</SelectItem>
+                </SelectContent>
+              </Select></div>
+            {err && <p className="text-xs text-red-500">{err}</p>}
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setEditItem(null)}>Cancel</Button>
+            <Button onClick={handleEdit} disabled={updateTeam.isPending}>{updateTeam.isPending ? "Saving…" : "Save"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      <Dialog open={!!deleteId} onOpenChange={(o) => { if (!o) setDeleteId(null); }}>
+        <DialogContent>
+          <DialogHeader><DialogTitle>Delete Team</DialogTitle><DialogDescription>This cannot be undone.</DialogDescription></DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDelete} disabled={deleteTeam.isPending}>{deleteTeam.isPending ? "Deleting…" : "Delete"}</Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
     </>
   );
 }

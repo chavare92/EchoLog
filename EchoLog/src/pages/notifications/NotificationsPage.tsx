@@ -62,9 +62,9 @@ export function NotificationsPage() {
       ) : (!notifications || notifications.length === 0) ? (
         <motion.div variants={itemVariants}>
           <GlassCard className="py-16 text-center">
-            <BellOff className="w-10 h-10 text-slate-600 mx-auto mb-3" />
-            <p className="text-slate-400 font-medium">No notifications</p>
-            <p className="text-sm text-slate-500 mt-1">You're all caught up.</p>
+            <BellOff className="w-10 h-10 text-gray-400 mx-auto mb-3" />
+            <p className="text-gray-500 font-medium">No notifications</p>
+            <p className="text-sm text-gray-400 mt-1">You're all caught up.</p>
           </GlassCard>
         </motion.div>
       ) : (
@@ -73,17 +73,17 @@ export function NotificationsPage() {
           {unread.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-semibold text-slate-400 uppercase tracking-wide">Unread</h3>
+                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Unread</h3>
                 <Badge variant="default" className="text-xs px-1.5 py-0">{unread.length}</Badge>
               </div>
               {unread.map((n) => (
                 <motion.div key={n.cr4c3_notificationid} variants={itemVariants}>
                   <GlassCard
-                    className="p-4 cursor-pointer hover:bg-white/5 border-amber-500/20"
+                    className="p-4 cursor-pointer hover:bg-gray-50 border-amber-200"
                     onClick={() => handleClick(n.cr4c3_notificationid!, n.cr4c3_isread)}
                   >
                     <div className="flex items-start gap-3">
-                      <div className="mt-1 w-2 h-2 rounded-full bg-amber-400 shrink-0" />
+                      <div className="mt-1 w-2 h-2 rounded-full bg-amber-600 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           {n.cr4c3_type !== undefined && (
@@ -91,11 +91,11 @@ export function NotificationsPage() {
                               {NOTIFICATION_TYPE_LABELS[n.cr4c3_type] ?? "Notification"}
                             </Badge>
                           )}
-                          <span className="text-xs text-slate-500 font-mono whitespace-nowrap">
+                          <span className="text-xs text-gray-400 font-mono whitespace-nowrap">
                             {formatDateTime(n.cr4c3_createdat)}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-200 mt-1.5">{n.cr4c3_message}</p>
+                        <p className="text-sm text-gray-900 mt-1.5">{n.cr4c3_message}</p>
                       </div>
                     </div>
                   </GlassCard>
@@ -107,12 +107,12 @@ export function NotificationsPage() {
           {/* Read */}
           {read.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-slate-500 uppercase tracking-wide">Read</h3>
+              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Read</h3>
               {read.map((n) => (
                 <motion.div key={n.cr4c3_notificationid} variants={itemVariants}>
                   <GlassCard className="p-4 opacity-60">
                     <div className="flex items-start gap-3">
-                      <div className="mt-1 w-2 h-2 rounded-full bg-slate-600 shrink-0" />
+                      <div className="mt-1 w-2 h-2 rounded-full bg-gray-300 shrink-0" />
                       <div className="flex-1 min-w-0">
                         <div className="flex items-center justify-between gap-2">
                           {n.cr4c3_type !== undefined && (
@@ -120,11 +120,11 @@ export function NotificationsPage() {
                               {NOTIFICATION_TYPE_LABELS[n.cr4c3_type] ?? "Notification"}
                             </Badge>
                           )}
-                          <span className="text-xs text-slate-600 font-mono whitespace-nowrap">
+                          <span className="text-xs text-gray-400 font-mono whitespace-nowrap">
                             {formatDateTime(n.cr4c3_createdat)}
                           </span>
                         </div>
-                        <p className="text-sm text-slate-400 mt-1.5">{n.cr4c3_message}</p>
+                        <p className="text-sm text-gray-500 mt-1.5">{n.cr4c3_message}</p>
                       </div>
                     </div>
                   </GlassCard>

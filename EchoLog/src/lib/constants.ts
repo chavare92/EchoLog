@@ -33,6 +33,8 @@ export const RCA_STATUS = {
   UnderReview: 564060002,
   Approved: 564060003,
   Rejected: 564060004,
+  PendingL1Review: 564060005,
+  PendingL2Review: 564060006,
 } as const;
 
 export type RCAStatusKey = keyof typeof RCA_STATUS;

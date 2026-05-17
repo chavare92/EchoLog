@@ -32,8 +32,8 @@ export class Cr4c3_teamsService {
     return result;
   }
 
-  public static async delete(id: string): Promise<void> {
-    await Cr4c3_teamsService.client.deleteRecordAsync(
+  public static async delete(id: string): Promise<IOperationResult<void>> {
+    return Cr4c3_teamsService.client.deleteRecordAsync(
       Cr4c3_teamsService.dataSourceName,
       id);
   }

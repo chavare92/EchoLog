@@ -1,7 +1,9 @@
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { z } from "zod";
-import { useNavigate, useLocation } from "react-router-dom";
+import { useNavigate, useLocation, Navigate } from "react-router-dom";
+import { useAtomValue } from "jotai";
+import { isAuthenticatedAtom } from "@/store/authAtoms";
 import { useState } from "react";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -14,7 +16,7 @@ import { USER_ROLE } from "@/lib/constants";
 
 // ─── Dev bypass ───────────────────────────────────────────────────────────────
 const DEV_USER = {
-  cr4c3_userprofileid: "dev-00000000-0000-0000-0000-000000000001",
+  cr4c3_userprofileid: "00000000-0000-0000-0000-000000000001",
   cr4c3_fullname: "Dev Admin",
   cr4c3_email: "test@echolog.dev",
   cr4c3_role: USER_ROLE.Admin,
@@ -32,6 +34,7 @@ export function LoginPage() {
   const navigate = useNavigate();
   const location = useLocation();
   const from = (location.state as { from?: { pathname: string } })?.from?.pathname ?? "/";
+  const isAuthenticated = useAtomValue(isAuthenticatedAtom);
 
   const [error, setError] = useState<string | null>(null);
 
@@ -40,6 +43,11 @@ export function LoginPage() {
     handleSubmit,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({ resolver: zodResolver(loginSchema) });
+
+  // Declarative redirect — must be after all hooks
+  if (isAuthenticated) {
+    return <Navigate to={from} replace />;
+  }
 
   const onSubmit = async (values: LoginFormValues) => {
     setError(null);
@@ -92,25 +100,25 @@ export function LoginPage() {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-[hsl(222,47%,6%)] px-4">
+    <div className="min-h-screen flex items-center justify-center bg-[hsl(220,14%,96%)] px-4">
       {/* Ambient orb */}
       <div className="pointer-events-none fixed top-1/4 left-1/2 -translate-x-1/2 w-[600px] h-[600px] rounded-full bg-amber-500/5 blur-3xl" />
 
       <div className="glass rounded-2xl w-full max-w-md p-8 relative z-10 space-y-6">
         {/* Header */}
         <div className="text-center space-y-2">
-          <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-500/10 border border-amber-500/20 mb-2">
-            <Zap className="w-6 h-6 text-amber-400" />
-          </div>
-          <h1 className="text-2xl font-bold text-slate-100 tracking-tight">ECHO LOG</h1>
-          <p className="text-sm text-slate-400">Enterprise Escalation Workflow System</p>
+        <div className="inline-flex items-center justify-center w-12 h-12 rounded-xl bg-amber-50 border border-amber-200 mb-2">
+          <Zap className="w-6 h-6 text-amber-600" />
+        </div>
+        <h1 className="text-2xl font-bold text-gray-900 tracking-tight">ECHO LOG</h1>
+        <p className="text-sm text-gray-500">Enterprise Escalation Workflow System</p>
         </div>
 
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-4">
           <div className="space-y-1.5">
             <Label htmlFor="email">Email address</Label>
             <div className="relative">
-              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Mail className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <Input
                 id="email"
                 type="email"
@@ -121,14 +129,14 @@ export function LoginPage() {
               />
             </div>
             {errors.email && (
-              <p className="text-xs text-red-400">{errors.email.message}</p>
+              <p className="text-xs text-red-600">{errors.email.message}</p>
             )}
           </div>
 
           <div className="space-y-1.5">
             <Label htmlFor="password">Password</Label>
             <div className="relative">
-              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+              <Lock className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
               <Input
                 id="password"
                 type="password"
@@ -139,14 +147,14 @@ export function LoginPage() {
               />
             </div>
             {errors.password && (
-              <p className="text-xs text-red-400">{errors.password.message}</p>
+              <p className="text-xs text-red-600">{errors.password.message}</p>
             )}
           </div>
 
           {error && (
-            <div className="flex items-center gap-2 rounded-md bg-red-500/10 border border-red-500/20 px-3 py-2">
-              <AlertCircle className="h-4 w-4 text-red-400 shrink-0" />
-              <p className="text-sm text-red-400">{error}</p>
+            <div className="flex items-center gap-2 rounded-md bg-red-50 border border-red-200 px-3 py-2">
+              <AlertCircle className="h-4 w-4 text-red-600 shrink-0" />
+              <p className="text-sm text-red-600">{error}</p>
             </div>
           )}
 
@@ -157,20 +165,20 @@ export function LoginPage() {
 
         {/* Dev shortcut */}
         <div className="relative">
-          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-white/8" /></div>
-          <div className="relative flex justify-center text-xs"><span className="bg-[hsl(222,47%,8%)] px-2 text-slate-500">dev</span></div>
+          <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-gray-200" /></div>
+          <div className="relative flex justify-center text-xs"><span className="bg-white px-2 text-gray-400">dev</span></div>
         </div>
         <Button
           type="button"
           variant="outline"
-          className="w-full border-amber-500/30 text-amber-400 hover:bg-amber-500/10"
+          className="w-full border-amber-300 text-amber-600 hover:bg-amber-50"
           onClick={() => { login(DEV_USER); navigate(from, { replace: true }); }}
         >
           <FlaskConical className="w-4 h-4 mr-2" />
           Quick Dev Login (Admin)
         </Button>
 
-        <p className="text-center text-xs text-slate-500">
+        <p className="text-center text-xs text-gray-400">
           Azure Entra ID SSO coming soon · Contact IT for access issues
         </p>
       </div>

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAtomValue } from "jotai";
 import { motion } from "framer-motion";
@@ -25,12 +25,21 @@ import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
 
 const CATEGORY_COLORS: Record<number, string> = {
-  [FISHBONE_CATEGORY.People]: "bg-purple-500/20 border-purple-500/40 text-purple-300",
-  [FISHBONE_CATEGORY.Process]: "bg-blue-500/20 border-blue-500/40 text-blue-300",
-  [FISHBONE_CATEGORY.Technology]: "bg-cyan-500/20 border-cyan-500/40 text-cyan-300",
-  [FISHBONE_CATEGORY.Data]: "bg-amber-500/20 border-amber-500/40 text-amber-300",
-  [FISHBONE_CATEGORY.Environment]: "bg-green-500/20 border-green-500/40 text-green-300",
-  [FISHBONE_CATEGORY.Governance]: "bg-red-500/20 border-red-500/40 text-red-300",
+  [FISHBONE_CATEGORY.People]: "bg-purple-100 border-purple-300 text-purple-700",
+  [FISHBONE_CATEGORY.Process]: "bg-blue-100 border-blue-300 text-blue-700",
+  [FISHBONE_CATEGORY.Technology]: "bg-cyan-100 border-cyan-300 text-cyan-700",
+  [FISHBONE_CATEGORY.Data]: "bg-amber-100 border-amber-300 text-amber-700",
+  [FISHBONE_CATEGORY.Environment]: "bg-green-100 border-green-300 text-green-700",
+  [FISHBONE_CATEGORY.Governance]: "bg-red-100 border-red-300 text-red-700",
+};
+
+const CATEGORY_HEX: Record<number, string> = {
+  [FISHBONE_CATEGORY.People]: "#9333ea",
+  [FISHBONE_CATEGORY.Process]: "#2563eb",
+  [FISHBONE_CATEGORY.Technology]: "#0891b2",
+  [FISHBONE_CATEGORY.Data]: "#d97706",
+  [FISHBONE_CATEGORY.Environment]: "#16a34a",
+  [FISHBONE_CATEGORY.Governance]: "#dc2626",
 };
 
 const CATEGORY_LABELS: Record<number, string> = {
@@ -77,14 +86,24 @@ export function RCABuilderPage() {
   const {
     register: registerRCA,
     handleSubmit: handleRCASubmit,
+    reset: resetRCA,
     formState: { errors: rcaErrors },
   } = useForm<RCAValues>({
     resolver: zodResolver(rcaSchema),
     defaultValues: {
-      rcatitle: existingRCA?.cr4c3_rcatitle ?? "",
-      effectstatement: existingRCA?.cr4c3_effectstatement ?? "",
+      rcatitle: "",
+      effectstatement: "",
     },
   });
+
+  useEffect(() => {
+    if (existingRCA) {
+      resetRCA({
+        rcatitle: existingRCA.cr4c3_rcatitle ?? "",
+        effectstatement: existingRCA.cr4c3_effectstatement ?? "",
+      });
+    }
+  }, [existingRCA, resetRCA]);
 
   const {
     register: registerCause,
@@ -105,9 +124,9 @@ export function RCABuilderPage() {
         cr4c3_effectstatement: values.effectstatement,
         cr4c3_status: RCA_STATUS.Draft,
         cr4c3_submittedat: new Date().toISOString(),
-        [`_cr4c3_incident_value`]: incidentId,
-        [`_cr4c3_submittedby_value`]: user?.cr4c3_userprofileid,
-      } as never);
+        _cr4c3_incident_value: incidentId,
+        _cr4c3_submittedby_value: user?.cr4c3_userprofileid,
+      });
     }
   };
 
@@ -129,8 +148,8 @@ export function RCABuilderPage() {
     await createCause.mutateAsync({
       cr4c3_causetext: values.causetext,
       cr4c3_category: Number(values.category),
-      [`_cr4c3_rcasubmission_value`]: existingRCA.cr4c3_rcasubmissionid,
-    } as never);
+      _cr4c3_rcasubmission_value: existingRCA.cr4c3_rcasubmissionid,
+    });
     resetCause();
     setAddingCause(false);
   };
@@ -150,8 +169,8 @@ export function RCABuilderPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h2 className="text-xl font-bold text-slate-100">RCA Builder</h2>
-          <p className="text-xs text-slate-400">{incident?.cr4c3_title}</p>
+          <h2 className="text-xl font-bold text-gray-900">RCA Builder</h2>
+          <p className="text-xs text-gray-500">{incident?.cr4c3_title}</p>
         </div>
         <div className="ml-auto flex gap-2">
           <Button
@@ -175,12 +194,12 @@ export function RCABuilderPage() {
           {/* RCA Header form */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-4">RCA Header</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">RCA Header</h3>
               <form onSubmit={handleRCASubmit(saveRCA)} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="rcatitle">RCA Title *</Label>
                   <Input id="rcatitle" {...registerRCA("rcatitle")} placeholder="Root cause analysis title" />
-                  {rcaErrors.rcatitle && <p className="text-xs text-red-400">{rcaErrors.rcatitle.message}</p>}
+                  {rcaErrors.rcatitle && <p className="text-xs text-red-600">{rcaErrors.rcatitle.message}</p>}
                 </div>
                 <div className="space-y-1.5">
                   <Label htmlFor="effectstatement">Effect Statement *</Label>
@@ -191,7 +210,7 @@ export function RCABuilderPage() {
                     rows={3}
                   />
                   {rcaErrors.effectstatement && (
-                    <p className="text-xs text-red-400">{rcaErrors.effectstatement.message}</p>
+                    <p className="text-xs text-red-600">{rcaErrors.effectstatement.message}</p>
                   )}
                 </div>
                 <Button type="submit" size="sm" disabled={createRCA.isPending || updateRCA.isPending}>
@@ -206,7 +225,7 @@ export function RCABuilderPage() {
             <motion.div variants={itemVariants}>
               <GlassCard className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-slate-300">
+                <h3 className="text-sm font-semibold text-gray-700">
                     Causes ({causes?.length ?? 0})
                   </h3>
                   <Button size="sm" variant="outline" onClick={() => setAddingCause(true)}>
@@ -216,25 +235,25 @@ export function RCABuilderPage() {
                 </div>
 
                 {addingCause && (
-                  <form onSubmit={handleCauseSubmit(addCause)} className="p-4 rounded-lg bg-white/3 border border-white/10 mb-4 space-y-3">
+                  <form onSubmit={handleCauseSubmit(addCause)} className="p-4 rounded-lg bg-gray-100 border border-gray-200 mb-4 space-y-3">
                     <div className="grid grid-cols-2 gap-3">
                       <div className="space-y-1.5">
                         <Label>Category *</Label>
                         <select
                           {...registerCause("category")}
-                          className="w-full bg-white/5 border border-white/12 rounded-lg px-3 py-2 text-sm text-slate-200 focus:outline-none focus:border-amber-500/50"
+                          className="w-full bg-gray-50 border border-gray-200 rounded-lg px-3 py-2 text-sm text-gray-900 focus:outline-none focus:border-amber-500"
                         >
                           <option value="">Select…</option>
                           {Object.entries(FISHBONE_CATEGORY).map(([k, v]) => (
                             <option key={k} value={v}>{k}</option>
                           ))}
                         </select>
-                        {causeErrors.category && <p className="text-xs text-red-400">{causeErrors.category.message}</p>}
+                        {causeErrors.category && <p className="text-xs text-red-600">{causeErrors.category.message}</p>}
                       </div>
                       <div className="space-y-1.5">
                         <Label>Cause Text *</Label>
                         <Input {...registerCause("causetext")} placeholder="Describe the cause…" />
-                        {causeErrors.causetext && <p className="text-xs text-red-400">{causeErrors.causetext.message}</p>}
+                        {causeErrors.causetext && <p className="text-xs text-red-600">{causeErrors.causetext.message}</p>}
                       </div>
                     </div>
                     <div className="flex gap-2">
@@ -251,12 +270,12 @@ export function RCABuilderPage() {
                     </div>
                     <div className="space-y-1.5 ml-2">
                       {items?.map((c) => (
-                        <div key={c.cr4c3_fishbonecauseid} className="flex items-center justify-between p-2.5 rounded bg-white/3">
-                          <span className="text-sm text-slate-300">{c.cr4c3_causetext}</span>
+                        <div key={c.cr4c3_fishbonecauseid} className="flex items-center justify-between p-2.5 rounded bg-gray-100">
+                          <span className="text-sm text-gray-700">{c.cr4c3_causetext}</span>
                           <Button
                             variant="ghost"
                             size="icon"
-                            className="h-7 w-7 text-slate-400 hover:text-red-400"
+                            className="h-7 w-7 text-gray-400 hover:text-red-600"
                             onClick={() => deleteCause.mutate(c.cr4c3_fishbonecauseid!)}
                           >
                             <Trash2 className="w-3.5 h-3.5" />
@@ -268,7 +287,7 @@ export function RCABuilderPage() {
                 ))}
 
                 {(!causes || causes.length === 0) && !addingCause && (
-                  <p className="text-sm text-slate-500 text-center py-4">No causes added yet.</p>
+                  <p className="text-sm text-gray-400 text-center py-4">No causes added yet.</p>
                 )}
               </GlassCard>
             </motion.div>
@@ -279,15 +298,15 @@ export function RCABuilderPage() {
         <motion.div variants={itemVariants}>
           <GlassCard className="p-6">
             <div className="overflow-x-auto">
-              <svg viewBox="0 0 900 500" className="w-full min-w-[600px] text-slate-300">
+              <svg viewBox="0 0 900 500" className="w-full min-w-[600px] text-gray-700">
                 {/* Spine */}
-                <line x1="100" y1="250" x2="800" y2="250" stroke="#f59e0b" strokeWidth="2.5" />
+                <line x1="100" y1="250" x2="800" y2="250" stroke="#d97706" strokeWidth="2.5" />
                 {/* Head */}
-                <rect x="800" y="210" width="90" height="80" rx="6" fill="#f59e0b22" stroke="#f59e0b55" />
-                <text x="845" y="255" textAnchor="middle" fill="#fbbf24" fontSize="12" fontWeight="600">
+                <rect x="800" y="210" width="90" height="80" rx="6" fill="#fef3c7" stroke="#fcd34d" />
+                <text x="845" y="255" textAnchor="middle" fill="#92400e" fontSize="12" fontWeight="600">
                   Effect
                 </text>
-                <text x="845" y="268" textAnchor="middle" fill="#94a3b8" fontSize="9">
+                <text x="845" y="268" textAnchor="middle" fill="#6b7280" fontSize="9">
                   {existingRCA?.cr4c3_effectstatement?.slice(0, 20)}…
                 </text>
 
@@ -298,15 +317,15 @@ export function RCABuilderPage() {
                   const x = positions[i] ?? 200;
                   const dy = side === "top" ? -80 : 80;
                   const ty = side === "top" ? 165 : 335;
-                  const color = Object.values(CATEGORY_COLORS)[i]?.match(/#?[a-f0-9]{6}/i)?.[0] ?? "#94a3b8";
+                  const color = CATEGORY_HEX[val] ?? "#94a3b8";
                   const branchCauses = (causes ?? []).filter((c) => c.cr4c3_category === val);
 
                   return (
                     <g key={val}>
-                      <line x1={x} y1="250" x2={x + 30} y2={250 + dy} stroke={color || "#94a3b8"} strokeWidth="1.5" opacity="0.7" />
-                      <text x={x + 32} y={ty} fill="#e2e8f0" fontSize="11" fontWeight="600">{label}</text>
+                      <line x1={x} y1="250" x2={x + 30} y2={250 + dy} stroke={color || "#6b7280"} strokeWidth="1.5" opacity="0.7" />
+                      <text x={x + 32} y={ty} fill="#1f2937" fontSize="11" fontWeight="600">{label}</text>
                       {branchCauses.slice(0, 3).map((c, ci) => (
-                        <text key={c.cr4c3_fishbonecauseid} x={x + 32} y={ty + 14 + ci * 13} fill="#94a3b8" fontSize="9">
+                        <text key={c.cr4c3_fishbonecauseid} x={x + 32} y={ty + 14 + ci * 13} fill="#6b7280" fontSize="9">
                           • {c.cr4c3_causetext?.slice(0, 25)}{(c.cr4c3_causetext?.length ?? 0) > 25 ? "…" : ""}
                         </text>
                       ))}

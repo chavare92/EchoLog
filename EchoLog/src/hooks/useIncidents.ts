@@ -1,6 +1,8 @@
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { Cr4c3_incidentsService } from "@/generated/services/Cr4c3_incidentsService";
 import type { Cr4c3_incidentsBase } from "@/generated/models/Cr4c3_incidentsModel";
+import { unwrapResult } from "@/lib/utils";
+import { toast } from "sonner";
 
 export const INCIDENTS_KEY = "incidents";
 
@@ -29,7 +31,7 @@ export function useIncidents(filters?: IncidentFilters) {
         filter: buildFilter(filters),
         orderBy: ["cr4c3_createdat desc"],
       });
-      return result.data ?? [];
+      return unwrapResult(result) ?? [];
     },
   });
 }
@@ -39,7 +41,7 @@ export function useIncident(id: string | undefined) {
     queryKey: [INCIDENTS_KEY, id],
     queryFn: async () => {
       const result = await Cr4c3_incidentsService.get(id!);
-      return result.data ?? null;
+      return unwrapResult(result) ?? null;
     },
     enabled: !!id,
   });
@@ -48,20 +50,26 @@ export function useIncident(id: string | undefined) {
 export function useCreateIncident() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: (record: Omit<Cr4c3_incidentsBase, "cr4c3_incidentid">) =>
-      Cr4c3_incidentsService.create(record),
+    mutationFn: async (record: Omit<Cr4c3_incidentsBase, "cr4c3_incidentid">) => {
+      const result = await Cr4c3_incidentsService.create(record);
+      return unwrapResult(result);
+    },
     onSuccess: () => qc.invalidateQueries({ queryKey: [INCIDENTS_KEY] }),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Operation failed"),
   });
 }
 
 export function useUpdateIncident() {
   const qc = useQueryClient();
   return useMutation({
-    mutationFn: ({ id, fields }: { id: string; fields: Partial<Cr4c3_incidentsBase> }) =>
-      Cr4c3_incidentsService.update(id, fields),
+    mutationFn: async ({ id, fields }: { id: string; fields: Partial<Cr4c3_incidentsBase> }) => {
+      const result = await Cr4c3_incidentsService.update(id, fields);
+      return unwrapResult(result);
+    },
     onSuccess: (_, { id }) => {
       qc.invalidateQueries({ queryKey: [INCIDENTS_KEY] });
       qc.invalidateQueries({ queryKey: [INCIDENTS_KEY, id] });
     },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Operation failed"),
   });
 }

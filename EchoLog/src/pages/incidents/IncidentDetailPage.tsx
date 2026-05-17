@@ -42,7 +42,7 @@ export function IncidentDetailPage() {
   const updateIncident = useUpdateIncident();
 
   if (isLoading) return <div className="p-6"><SkeletonCard /></div>;
-  if (!incident) return <div className="p-8 text-center text-slate-400">Incident not found.</div>;
+  if (!incident) return <div className="p-8 text-center text-gray-500">Incident not found.</div>;
 
   const currentStatusIndex = STATUS_STEPS.findIndex((s) => s.key === incident.cr4c3_status);
   const progressPct = Math.round(((currentStatusIndex + 1) / STATUS_STEPS.length) * 100);
@@ -56,8 +56,8 @@ export function IncidentDetailPage() {
       id,
       fields: {
         cr4c3_status: INCIDENT_STATUS.InvestigationPending,
-        [`_cr4c3_assignee_value`]: currentUser.cr4c3_userprofileid,
-      } as never,
+        _cr4c3_assignee_value: currentUser.cr4c3_userprofileid,
+      },
     });
   };
 
@@ -77,7 +77,7 @@ export function IncidentDetailPage() {
               <TATCountdown dueDate={incident.cr4c3_duedate} />
             )}
           </div>
-          <h2 className="text-xl font-bold text-slate-100 mt-1">{incident.cr4c3_title}</h2>
+          <h2 className="text-xl font-bold text-gray-900 mt-1">{incident.cr4c3_title}</h2>
         </div>
         <div className="flex gap-2 flex-wrap">
           {incident.cr4c3_status === INCIDENT_STATUS.Open && (isAdmin || isAssignee) && (
@@ -107,8 +107,8 @@ export function IncidentDetailPage() {
           {/* Description */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Description</h3>
-              <p className="text-sm text-slate-300 leading-relaxed">{incident.cr4c3_description}</p>
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Description</h3>
+              <p className="text-sm text-gray-700 leading-relaxed">{incident.cr4c3_description}</p>
             </GlassCard>
           </motion.div>
 
@@ -116,7 +116,7 @@ export function IncidentDetailPage() {
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-slate-300">Root Cause Analysis</h3>
+                <h3 className="text-sm font-semibold text-gray-700">Root Cause Analysis</h3>
                 {incident.cr4c3_status === INCIDENT_STATUS.InvestigationPending && (
                   <Button size="sm" onClick={() => navigate(`/incidents/${id}/rca`)}>
                     <GitBranch className="w-4 h-4 mr-1" />
@@ -125,17 +125,17 @@ export function IncidentDetailPage() {
                 )}
               </div>
               {!rcaList || rcaList.length === 0 ? (
-                <p className="text-sm text-slate-500">No RCA submitted yet.</p>
+                <p className="text-sm text-gray-400">No RCA submitted yet.</p>
               ) : (
                 <div className="space-y-3">
                   {rcaList.map((rca) => (
                     <div
                       key={rca.cr4c3_rcasubmissionid}
-                      className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-white/8"
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-100 border border-gray-200"
                     >
                       <div>
-                        <p className="text-sm font-medium text-slate-200">{rca.cr4c3_rcatitle}</p>
-                        <p className="text-xs text-slate-400 mt-0.5">
+                        <p className="text-sm font-medium text-gray-900">{rca.cr4c3_rcatitle}</p>
+                        <p className="text-xs text-gray-500 mt-0.5">
                           Submitted {formatDateTime(rca.cr4c3_submittedat)}
                         </p>
                       </div>
@@ -152,9 +152,9 @@ export function IncidentDetailPage() {
             <GlassCard className="p-5">
               <div className="flex items-center justify-between mb-4">
                 <div>
-                  <h3 className="text-sm font-semibold text-slate-300">Preventive Actions</h3>
+                  <h3 className="text-sm font-semibold text-gray-700">Preventive Actions</h3>
                   {totalPAs > 0 && (
-                    <p className="text-xs text-slate-400 mt-0.5">{completedPAs}/{totalPAs} completed</p>
+                    <p className="text-xs text-gray-500 mt-0.5">{completedPAs}/{totalPAs} completed</p>
                   )}
                 </div>
                 <Button
@@ -170,26 +170,26 @@ export function IncidentDetailPage() {
                 <Progress value={(completedPAs / totalPAs) * 100} className="mb-4" />
               )}
               {!paList || paList.length === 0 ? (
-                <p className="text-sm text-slate-500">No preventive actions yet.</p>
+                <p className="text-sm text-gray-400">No preventive actions yet.</p>
               ) : (
                 <div className="space-y-2">
                   {paList.map((pa) => (
                     <div
                       key={pa.cr4c3_preventiveactionid}
-                      className="flex items-center justify-between p-3 rounded-lg bg-white/3 border border-white/8 cursor-pointer hover:bg-white/5"
+                      className="flex items-center justify-between p-3 rounded-lg bg-gray-100 border border-gray-200 cursor-pointer hover:bg-gray-200"
                       onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}
                     >
                       <div className="flex items-center gap-2">
                         {pa.cr4c3_status === PA_STATUS.Completed ? (
-                          <CheckCircle className="w-4 h-4 text-green-400" />
+                          <CheckCircle className="w-4 h-4 text-green-600" />
                         ) : (
-                          <XCircle className="w-4 h-4 text-slate-500" />
+                          <XCircle className="w-4 h-4 text-gray-400" />
                         )}
-                        <span className="text-sm text-slate-200">{pa.cr4c3_title}</span>
+                        <span className="text-sm text-gray-900">{pa.cr4c3_title}</span>
                       </div>
                       <div className="flex items-center gap-2">
                         <StatusBadge status={pa.cr4c3_status} type="pa" />
-                        <span className="text-xs text-slate-400">Due {formatDate(pa.cr4c3_duedate)}</span>
+                        <span className="text-xs text-gray-500">Due {formatDate(pa.cr4c3_duedate)}</span>
                       </div>
                     </div>
                   ))}
@@ -204,7 +204,7 @@ export function IncidentDetailPage() {
           {/* Metadata */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-4">Details</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Details</h3>
               <dl className="space-y-3">
                 {[
                   { label: "Created", value: formatDateTime(incident.cr4c3_createdat) },
@@ -213,8 +213,8 @@ export function IncidentDetailPage() {
                   { label: "Rejection Count", value: String(incident.cr4c3_rejectioncount ?? 0) },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <dt className="text-xs text-slate-400 uppercase tracking-wide">{label}</dt>
-                    <dd className="text-sm text-slate-200 mt-0.5 font-mono">{value}</dd>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">{label}</dt>
+                    <dd className="text-sm text-gray-900 mt-0.5 font-mono">{value}</dd>
                   </div>
                 ))}
               </dl>
@@ -224,7 +224,7 @@ export function IncidentDetailPage() {
           {/* Status Timeline */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-4">Progress</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Progress</h3>
               <Progress value={progressPct} className="mb-4" />
               <div className="space-y-2">
                 {STATUS_STEPS.map((step, i) => {
@@ -233,19 +233,19 @@ export function IncidentDetailPage() {
                   return (
                     <div key={step.key} className="flex items-center gap-2.5">
                       {done ? (
-                        <CheckCircle className="w-4 h-4 text-green-400 shrink-0" />
+                        <CheckCircle className="w-4 h-4 text-green-600 shrink-0" />
                       ) : active ? (
                         <PulseIndicator color="amber" />
                       ) : (
-                        <div className="w-2.5 h-2.5 rounded-full border border-white/20 shrink-0 ml-0.5" />
+                        <div className="w-2.5 h-2.5 rounded-full border border-gray-300 shrink-0 ml-0.5" />
                       )}
                       <span
                         className={`text-xs ${
                           active
-                            ? "text-amber-300 font-semibold"
+                            ? "text-amber-600 font-semibold"
                             : done
-                            ? "text-slate-400"
-                            : "text-slate-600"
+                            ? "text-gray-500"
+                            : "text-gray-400"
                         }`}
                       >
                         {step.label}

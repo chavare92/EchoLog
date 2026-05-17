@@ -7,9 +7,9 @@ export interface Cr4c3_userprofilesBase {
   createdon?: string;
   cr4c3_email?: string;
   cr4c3_fullname?: string;
-  cr4c3_password?: string;
   importsequencenumber?: number;
   modifiedon?: string;
+  cr4c3_password?: string;
   overriddencreatedon?: string;
   cr4c3_role?: number;
   statuscode?: number;

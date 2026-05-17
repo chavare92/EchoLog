@@ -65,10 +65,10 @@ export function CreatePAPage() {
       cr4c3_status: PA_STATUS.NotStarted,
       cr4c3_createdat: new Date().toISOString(),
       cr4c3_duedate: new Date(values.dueDate).toISOString(),
-      [`_cr4c3_incident_value`]: values.incidentId,
-      [`_cr4c3_paowner_value`]: values.paOwnerId,
-      [`_cr4c3_createdby_value`]: user?.cr4c3_userprofileid,
-    } as never);
+      _cr4c3_incident_value: values.incidentId,
+      _cr4c3_paowner_value: values.paOwnerId,
+      _cr4c3_createdby_value: user?.cr4c3_userprofileid,
+    });
     navigate("/preventive-actions");
   };
 
@@ -81,14 +81,14 @@ export function CreatePAPage() {
             <div className="space-y-1.5">
               <Label htmlFor="pa-title">Title *</Label>
               <Input id="pa-title" placeholder="Action title" {...register("title")} />
-              {errors.title && <p className="text-xs text-red-400">{errors.title.message}</p>}
+              {errors.title && <p className="text-xs text-red-600">{errors.title.message}</p>}
             </div>
 
             {/* Description */}
             <div className="space-y-1.5">
               <Label htmlFor="pa-desc">Description *</Label>
               <Textarea id="pa-desc" placeholder="Describe the preventive action…" rows={3} {...register("description")} />
-              {errors.description && <p className="text-xs text-red-400">{errors.description.message}</p>}
+              {errors.description && <p className="text-xs text-red-600">{errors.description.message}</p>}
             </div>
 
             {/* Incident */}
@@ -112,7 +112,7 @@ export function CreatePAPage() {
                   </Select>
                 )}
               />
-              {errors.incidentId && <p className="text-xs text-red-400">{errors.incidentId.message}</p>}
+              {errors.incidentId && <p className="text-xs text-red-600">{errors.incidentId.message}</p>}
             </div>
 
             {/* PA Owner */}
@@ -136,7 +136,7 @@ export function CreatePAPage() {
                   </Select>
                 )}
               />
-              {errors.paOwnerId && <p className="text-xs text-red-400">{errors.paOwnerId.message}</p>}
+              {errors.paOwnerId && <p className="text-xs text-red-600">{errors.paOwnerId.message}</p>}
             </div>
 
             {/* Due Date */}
@@ -149,7 +149,7 @@ export function CreatePAPage() {
                 {...register("dueDate")}
                 className="[color-scheme:dark]"
               />
-              {errors.dueDate && <p className="text-xs text-red-400">{errors.dueDate.message}</p>}
+              {errors.dueDate && <p className="text-xs text-red-600">{errors.dueDate.message}</p>}
             </div>
 
             <div className="flex gap-3 pt-2">

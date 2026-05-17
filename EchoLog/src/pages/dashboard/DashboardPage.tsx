@@ -38,17 +38,17 @@ function MetricCard({ label, value, icon: Icon, color, pulse }: MetricCardProps)
       <GlassCard className="p-5">
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-medium text-slate-400 uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
             <p className={`text-3xl font-bold ${color}`}>{value}</p>
           </div>
-          <div className={`p-2 rounded-lg bg-white/5 ${color}`}>
+          <div className={`p-2 rounded-lg bg-gray-100 ${color}`}>
             <Icon className="w-5 h-5" />
           </div>
         </div>
         {pulse && (
           <div className="mt-3 flex items-center gap-1.5">
             <PulseIndicator color="red" />
-            <span className="text-xs text-slate-400">Requires attention</span>
+            <span className="text-xs text-gray-500">Requires attention</span>
           </div>
         )}
       </GlassCard>
@@ -104,27 +104,27 @@ export function DashboardPage() {
             label="Open Incidents"
             value={openCount}
             icon={AlertCircle}
-            color="text-blue-400"
+            color="text-blue-600"
           />
           <MetricCard
             label="Pending Review"
             value={pendingReviewCount}
             icon={ClipboardCheck}
-            color="text-amber-400"
+            color="text-amber-600"
             pulse={pendingReviewCount > 0}
           />
           <MetricCard
             label="Overdue PAs"
             value={overduePACount}
             icon={ShieldAlert}
-            color="text-red-400"
+            color="text-red-600"
             pulse={overduePACount > 0}
           />
           <MetricCard
             label="Closed This Week"
             value={completedThisWeek}
             icon={CheckCircle}
-            color="text-green-400"
+            color="text-green-600"
           />
         </div>
       )}
@@ -132,8 +132,8 @@ export function DashboardPage() {
       {/* My Incidents */}
       <motion.div variants={itemVariants}>
         <GlassCard>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-            <h3 className="text-sm font-semibold text-slate-200">My Incidents</h3>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900">My Incidents</h3>
             <Button variant="ghost" size="sm" onClick={() => navigate("/incidents")}>
               View all <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
@@ -143,17 +143,17 @@ export function DashboardPage() {
               <SkeletonTable rows={3} columns={5} />
             </div>
           ) : !myIncidents || myIncidents.length === 0 ? (
-            <div className="py-12 text-center text-slate-500 text-sm">No incidents logged yet.</div>
+            <div className="py-12 text-center text-gray-400 text-sm">No incidents logged yet.</div>
           ) : (
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-gray-100">
               {myIncidents.slice(0, 5).map((inc) => (
                 <div
                   key={inc.cr4c3_incidentid}
-                  className="flex items-center gap-4 px-5 py-3 hover:bg-white/3 cursor-pointer transition-colors"
+                  className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
                   onClick={() => navigate(`/incidents/${inc.cr4c3_incidentid}`)}
                 >
                   <TicketRef value={inc.cr4c3_ticketreference} />
-                  <span className="flex-1 text-sm text-slate-200 truncate">{inc.cr4c3_title}</span>
+                  <span className="flex-1 text-sm text-gray-900 truncate">{inc.cr4c3_title}</span>
                   <SeverityBadge severity={inc.cr4c3_severity} />
                   <StatusBadge status={inc.cr4c3_status} />
                   <TATCountdown dueDate={inc.cr4c3_duedate} />
@@ -167,8 +167,8 @@ export function DashboardPage() {
       {/* Recent Activity */}
       <motion.div variants={itemVariants}>
         <GlassCard>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-            <h3 className="text-sm font-semibold text-slate-200">All Open Incidents</h3>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-900">All Open Incidents</h3>
             <Button variant="ghost" size="sm" onClick={() => navigate("/incidents?status=open")}>
               View all <ArrowRight className="w-3 h-3 ml-1" />
             </Button>
@@ -178,25 +178,25 @@ export function DashboardPage() {
               <SkeletonTable rows={5} columns={5} />
             </div>
           ) : (
-            <div className="divide-y divide-white/5">
+            <div className="divide-y divide-gray-100">
               {(allIncidents ?? [])
                 .filter((i) => i.cr4c3_status === INCIDENT_STATUS.Open)
                 .slice(0, 8)
                 .map((inc) => (
                   <div
                     key={inc.cr4c3_incidentid}
-                    className="flex items-center gap-4 px-5 py-3 hover:bg-white/3 cursor-pointer transition-colors"
+                    className="flex items-center gap-4 px-5 py-3 hover:bg-gray-50 cursor-pointer transition-colors"
                     onClick={() => navigate(`/incidents/${inc.cr4c3_incidentid}`)}
                   >
                     <TicketRef value={inc.cr4c3_ticketreference} />
-                    <span className="flex-1 text-sm text-slate-200 truncate">{inc.cr4c3_title}</span>
+                    <span className="flex-1 text-sm text-gray-900 truncate">{inc.cr4c3_title}</span>
                     <SeverityBadge severity={inc.cr4c3_severity} />
                     <TATCountdown dueDate={inc.cr4c3_duedate} />
-                    <span className="text-xs text-slate-500">{formatDateTime(inc.cr4c3_createdat)}</span>
+                    <span className="text-xs text-gray-400">{formatDateTime(inc.cr4c3_createdat)}</span>
                   </div>
                 ))}
               {(allIncidents?.filter((i) => i.cr4c3_status === INCIDENT_STATUS.Open).length ?? 0) === 0 && (
-                <div className="py-12 text-center text-slate-500 text-sm">No open incidents.</div>
+                <div className="py-12 text-center text-gray-400 text-sm">No open incidents.</div>
               )}
             </div>
           )}

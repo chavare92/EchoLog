@@ -53,22 +53,22 @@ export function PreventiveActionsListPage() {
       {/* Stats row */}
       <motion.div variants={itemVariants} className="grid grid-cols-3 gap-4">
         <GlassCard className="p-4">
-          <p className="text-xs text-slate-400 uppercase tracking-wide">Total</p>
-          <p className="text-2xl font-bold text-slate-100 mt-1">{totalCount}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Total</p>
+          <p className="text-2xl font-bold text-gray-900 mt-1">{totalCount}</p>
         </GlassCard>
         <GlassCard className="p-4">
-          <p className="text-xs text-slate-400 uppercase tracking-wide">Completed</p>
-          <p className="text-2xl font-bold text-green-400 mt-1">{completedCount}</p>
+          <p className="text-xs text-gray-500 uppercase tracking-wide">Completed</p>
+          <p className="text-2xl font-bold text-green-600 mt-1">{completedCount}</p>
           {totalCount > 0 && (
             <Progress value={(completedCount / totalCount) * 100} className="mt-2 h-1" />
           )}
         </GlassCard>
         <GlassCard className="p-4">
           <div className="flex items-center gap-1.5">
-            <p className="text-xs text-slate-400 uppercase tracking-wide">Overdue</p>
+            <p className="text-xs text-gray-500 uppercase tracking-wide">Overdue</p>
             {overdueCount > 0 && <PulseIndicator color="red" />}
           </div>
-          <p className={`text-2xl font-bold mt-1 ${overdueCount > 0 ? "text-red-400" : "text-slate-100"}`}>
+          <p className={`text-2xl font-bold mt-1 ${overdueCount > 0 ? "text-red-600" : "text-gray-900"}`}>
             {overdueCount}
           </p>
         </GlassCard>
@@ -76,7 +76,7 @@ export function PreventiveActionsListPage() {
 
       {/* Filter */}
       <motion.div variants={itemVariants} className="flex items-center gap-2">
-        <Filter className="w-4 h-4 text-slate-400" />
+        <Filter className="w-4 h-4 text-gray-500" />
         <Select value={statusFilter} onValueChange={setStatusFilter}>
           <SelectTrigger className="w-44">
             <SelectValue placeholder="All statuses" />
@@ -90,7 +90,7 @@ export function PreventiveActionsListPage() {
             ))}
           </SelectContent>
         </Select>
-        <p className="text-xs text-slate-500">
+        <p className="text-xs text-gray-400">
           {filtered.length} action{filtered.length !== 1 ? "s" : ""}
         </p>
       </motion.div>
@@ -100,7 +100,7 @@ export function PreventiveActionsListPage() {
         <SkeletonCards count={6} />
       ) : filtered.length === 0 ? (
         <GlassCard className="py-16 text-center">
-          <p className="text-slate-500 text-sm">No preventive actions match your filter.</p>
+          <p className="text-gray-400 text-sm">No preventive actions match your filter.</p>
         </GlassCard>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
@@ -109,20 +109,20 @@ export function PreventiveActionsListPage() {
             return (
               <motion.div key={pa.cr4c3_preventiveactionid} variants={itemVariants}>
                 <GlassCard
-                  className={`p-4 cursor-pointer hover:bg-white/5 transition-colors ${overdue ? "border-red-500/30" : ""}`}
+                  className={`p-4 cursor-pointer hover:bg-gray-50 transition-colors ${overdue ? "border-red-200" : ""}`}
                   onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}
                 >
                   <div className="flex items-start justify-between mb-2">
                     <StatusBadge status={pa.cr4c3_status} type="pa" />
                     {overdue && <PulseIndicator color="red" />}
                   </div>
-                  <p className="font-semibold text-slate-100 text-sm truncate">{pa.cr4c3_title}</p>
+                  <p className="font-semibold text-gray-900 text-sm truncate">{pa.cr4c3_title}</p>
                   {pa.cr4c3_description && (
-                    <p className="text-xs text-slate-400 mt-1 line-clamp-2">{pa.cr4c3_description}</p>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{pa.cr4c3_description}</p>
                   )}
                   <div className="flex items-center justify-between mt-3">
                     <TicketRef value={getIncidentTicket(pa._cr4c3_incident_value)} className="text-xs" />
-                    <span className={`text-xs ${overdue ? "text-red-400" : "text-slate-400"}`}>
+                    <span className={`text-xs ${overdue ? "text-red-600" : "text-gray-500"}`}>
                       Due {formatDate(pa.cr4c3_duedate)}
                     </span>
                   </div>

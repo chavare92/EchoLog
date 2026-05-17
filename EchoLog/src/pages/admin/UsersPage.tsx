@@ -32,13 +32,13 @@ const ROLE_LABELS: Record<number, string> = {
 };
 
 const ROLE_COLORS: Record<number, string> = {
-  [USER_ROLE.Admin]: "bg-red-500/20 text-red-300",
-  [USER_ROLE.L2Manager]: "bg-purple-500/20 text-purple-300",
-  [USER_ROLE.L1Manager]: "bg-blue-500/20 text-blue-300",
-  [USER_ROLE.Assignee]: "bg-amber-500/20 text-amber-300",
-  [USER_ROLE.PAOwner]: "bg-green-500/20 text-green-300",
-  [USER_ROLE.Logger]: "bg-slate-500/20 text-slate-300",
-  [USER_ROLE.Member]: "bg-slate-600/20 text-slate-400",
+  [USER_ROLE.Admin]: "bg-red-100 text-red-700",
+  [USER_ROLE.L2Manager]: "bg-purple-100 text-purple-700",
+  [USER_ROLE.L1Manager]: "bg-blue-100 text-blue-700",
+  [USER_ROLE.Assignee]: "bg-amber-100 text-amber-700",
+  [USER_ROLE.PAOwner]: "bg-green-100 text-green-700",
+  [USER_ROLE.Logger]: "bg-gray-100 text-gray-600",
+  [USER_ROLE.Member]: "bg-gray-100 text-gray-500",
 };
 
 export function UsersPage() {
@@ -64,7 +64,7 @@ export function UsersPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">Admin access required.</p>
+        <p className="text-gray-500">Admin access required.</p>
       </div>
     );
   }
@@ -126,7 +126,7 @@ export function UsersPage() {
   return (
     <PageWrapper title="User Management">
       <motion.div variants={itemVariants} className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
         <Input
           placeholder="Search users…"
           className="pl-9"
@@ -137,8 +137,8 @@ export function UsersPage() {
 
       <motion.div variants={itemVariants}>
         <GlassCard>
-          <div className="flex items-center justify-between px-5 py-4 border-b border-white/8">
-            <h3 className="text-sm font-semibold text-slate-300">Users ({filtered.length})</h3>
+          <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
+            <h3 className="text-sm font-semibold text-gray-700">Users ({filtered.length})</h3>
             <Button size="sm" onClick={() => setAddOpen(true)}>
               <Plus className="w-4 h-4 mr-1" />
               Add User
@@ -147,7 +147,7 @@ export function UsersPage() {
           {isLoading ? (
             <div className="p-4"><SkeletonTable rows={8} columns={4} /></div>
           ) : filtered.length === 0 ? (
-            <div className="p-10 text-center text-slate-500 text-sm">
+            <div className="p-10 text-center text-gray-400 text-sm">
               {search ? "No users match your search." : "No users yet. Click Add User to create the first profile."}
             </div>
           ) : (
@@ -163,11 +163,11 @@ export function UsersPage() {
               <TableBody>
                 {filtered.map((u) => (
                   <TableRow key={u.cr4c3_userprofileid}>
-                    <TableCell className="font-medium text-slate-200">{u.cr4c3_fullname}</TableCell>
-                    <TableCell className="text-slate-400 text-sm">{u.cr4c3_email}</TableCell>
+                    <TableCell className="font-medium text-gray-900">{u.cr4c3_fullname}</TableCell>
+                    <TableCell className="text-gray-500 text-sm">{u.cr4c3_email}</TableCell>
                     <TableCell>
                       {u.cr4c3_role !== undefined && (
-                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${ROLE_COLORS[u.cr4c3_role] ?? "text-slate-400"}`}>
+                        <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${ROLE_COLORS[u.cr4c3_role] ?? "text-gray-500"}`}>
                           {ROLE_LABELS[u.cr4c3_role] ?? "Unknown"}
                         </span>
                       )}
@@ -271,7 +271,7 @@ export function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
-            {addError && <p className="text-xs text-red-400">{addError}</p>}
+            {addError && <p className="text-xs text-red-600">{addError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>

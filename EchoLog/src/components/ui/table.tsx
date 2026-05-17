@@ -18,7 +18,7 @@ const TableHeader = React.forwardRef<
   HTMLTableSectionElement,
   React.HTMLAttributes<HTMLTableSectionElement>
 >(({ className, ...props }, ref) => (
-  <thead ref={ref} className={cn("[&_tr]:border-b [&_tr]:border-white/8", className)} {...props} />
+  <thead ref={ref} className={cn("[&_tr]:border-b [&_tr]:border-gray-200", className)} {...props} />
 ));
 TableHeader.displayName = "TableHeader";
 
@@ -36,7 +36,7 @@ const TableFooter = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <tfoot
     ref={ref}
-    className={cn("border-t border-white/8 bg-slate-800/50 font-medium", className)}
+    className={cn("border-t border-gray-200 bg-gray-50 font-medium", className)}
     {...props}
   />
 ));
@@ -49,7 +49,7 @@ const TableRow = React.forwardRef<
   <tr
     ref={ref}
     className={cn(
-      "border-b border-white/5 transition-colors hover:bg-white/3 data-[state=selected]:bg-amber-500/10",
+      "border-b border-gray-100 transition-colors hover:bg-gray-50 data-[state=selected]:bg-amber-50",
       className
     )}
     {...props}
@@ -64,7 +64,7 @@ const TableHead = React.forwardRef<
   <th
     ref={ref}
     className={cn(
-      "h-10 px-4 text-left align-middle font-medium text-slate-400 text-xs uppercase tracking-wide",
+      "h-10 px-4 text-left align-middle font-medium text-gray-500 text-xs uppercase tracking-wide",
       className
     )}
     {...props}
@@ -78,7 +78,7 @@ const TableCell = React.forwardRef<
 >(({ className, ...props }, ref) => (
   <td
     ref={ref}
-    className={cn("px-4 py-3 align-middle text-slate-200", className)}
+    className={cn("px-4 py-3 align-middle text-gray-900", className)}
     {...props}
   />
 ));
@@ -88,7 +88,7 @@ const TableCaption = React.forwardRef<
   HTMLTableCaptionElement,
   React.HTMLAttributes<HTMLTableCaptionElement>
 >(({ className, ...props }, ref) => (
-  <caption ref={ref} className={cn("mt-4 text-sm text-slate-400", className)} {...props} />
+  <caption ref={ref} className={cn("mt-4 text-sm text-gray-500", className)} {...props} />
 ));
 TableCaption.displayName = "TableCaption";
 

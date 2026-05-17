@@ -186,6 +186,29 @@
           "x-ms-visibility": "advanced",
           "x-ms-permission": "read-only"
         },
+        "cr4c3_password": {
+          "x-ms-sort": "none",
+          "type": "string",
+          "maxLength": 64,
+          "x-ms-capabilities": {
+            "filterFunctions": [
+              "eq",
+              "ne",
+              "gt",
+              "ge",
+              "lt",
+              "le",
+              "contains",
+              "startswith",
+              "endswith",
+              "null"
+            ]
+          },
+          "description": "",
+          "title": "Password",
+          "x-ms-visibility": "advanced",
+          "x-ms-permission": "read-write"
+        },
         "overriddencreatedon": {
           "x-ms-sort": "none",
           "type": "string",

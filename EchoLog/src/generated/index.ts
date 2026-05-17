@@ -18,6 +18,7 @@ export * as Cr4c3_slarulesModel from './models/Cr4c3_slarulesModel';
 export * as Cr4c3_subdepartmentsModel from './models/Cr4c3_subdepartmentsModel';
 export * as Cr4c3_teamsModel from './models/Cr4c3_teamsModel';
 export * as Cr4c3_userprofilesModel from './models/Cr4c3_userprofilesModel';
+// GeneratedTypeAliases.d.ts contains global ambient types; it must not be re-exported as a module.
 
 // Services
 export * from './services/Cr4c3_auditlogsService';

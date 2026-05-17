@@ -103,12 +103,12 @@ export function LogIncidentPage() {
       cr4c3_status: 564060000, // Open
       cr4c3_createdat: now,
       cr4c3_updatedat: now,
-      [`_cr4c3_loggedby_value`]: user?.cr4c3_userprofileid,
-      [`_cr4c3_department_value`]: values.departmentId,
-      [`_cr4c3_subdepartment_value`]: values.subdepartmentId,
-      [`_cr4c3_process_value`]: values.processId,
-      ...(values.teamId ? { [`_cr4c3_team_value`]: values.teamId } : {}),
-    } as never);
+      _cr4c3_loggedby_value: user?.cr4c3_userprofileid,
+      _cr4c3_department_value: values.departmentId,
+      _cr4c3_subdepartment_value: values.subdepartmentId,
+      _cr4c3_process_value: values.processId,
+      ...(values.teamId ? { _cr4c3_team_value: values.teamId } : {}),
+    });
     navigate("/incidents");
   };
 
@@ -129,7 +129,7 @@ export function LogIncidentPage() {
             <div className="space-y-1.5">
               <Label htmlFor="title">Incident Title *</Label>
               <Input id="title" placeholder="Brief description of the incident" {...register("title")} />
-              {errors.title && <p className="text-xs text-red-400">{errors.title.message}</p>}
+              {errors.title && <p className="text-xs text-red-600">{errors.title.message}</p>}
             </div>
 
             {/* Description */}
@@ -141,7 +141,7 @@ export function LogIncidentPage() {
                 rows={4}
                 {...register("description")}
               />
-              {errors.description && <p className="text-xs text-red-400">{errors.description.message}</p>}
+              {errors.description && <p className="text-xs text-red-600">{errors.description.message}</p>}
             </div>
 
             {/* Severity */}
@@ -159,12 +159,12 @@ export function LogIncidentPage() {
                         onClick={() => field.onChange(String(val))}
                         className={`flex-1 flex flex-col items-center py-3 rounded-lg border transition-all ${
                           field.value === String(val)
-                            ? "border-amber-500/50 bg-amber-500/10"
-                            : "border-white/8 bg-transparent hover:bg-white/5"
+                            ? "border-amber-300 bg-amber-50"
+                            : "border-gray-200 bg-transparent hover:bg-gray-50"
                         }`}
                       >
                         <SeverityBadge severity={val} />
-                        <span className="text-xs text-slate-400 mt-1">
+                        <span className="text-xs text-gray-500 mt-1">
                           {key === "Critical" ? "4h TAT" : key === "High" ? "24h TAT" : "72h TAT"}
                         </span>
                       </button>
@@ -172,7 +172,7 @@ export function LogIncidentPage() {
                   />
                 ))}
               </div>
-              {errors.severity && <p className="text-xs text-red-400">{errors.severity.message}</p>}
+              {errors.severity && <p className="text-xs text-red-600">{errors.severity.message}</p>}
             </div>
 
             {/* Cascading Hierarchy */}
@@ -196,7 +196,7 @@ export function LogIncidentPage() {
                     </Select>
                   )}
                 />
-                {errors.departmentId && <p className="text-xs text-red-400">{errors.departmentId.message}</p>}
+                {errors.departmentId && <p className="text-xs text-red-600">{errors.departmentId.message}</p>}
               </div>
 
               {/* Subdepartment */}
@@ -218,7 +218,7 @@ export function LogIncidentPage() {
                     </Select>
                   )}
                 />
-                {errors.subdepartmentId && <p className="text-xs text-red-400">{errors.subdepartmentId.message}</p>}
+                {errors.subdepartmentId && <p className="text-xs text-red-600">{errors.subdepartmentId.message}</p>}
               </div>
 
               {/* Process */}
@@ -240,12 +240,12 @@ export function LogIncidentPage() {
                     </Select>
                   )}
                 />
-                {errors.processId && <p className="text-xs text-red-400">{errors.processId.message}</p>}
+                {errors.processId && <p className="text-xs text-red-600">{errors.processId.message}</p>}
               </div>
 
               {/* Team (optional) */}
               <div className="space-y-1.5">
-                <Label>Team <span className="text-slate-500">(optional)</span></Label>
+                <Label>Team <span className="text-gray-400">(optional)</span></Label>
                 <Controller
                   name="teamId"
                   control={control}
@@ -275,7 +275,7 @@ export function LogIncidentPage() {
             </div>
 
             {createIncident.isError && (
-              <p className="text-sm text-red-400">Failed to log incident. Please try again.</p>
+              <p className="text-sm text-red-600">Failed to log incident. Please try again.</p>
             )}
           </form>
         </GlassCard>
@@ -286,7 +286,7 @@ export function LogIncidentPage() {
         <DialogContent>
           <DialogHeader>
             <div className="flex items-center gap-2 mb-1">
-              <AlertTriangle className="w-5 h-5 text-amber-400" />
+              <AlertTriangle className="w-5 h-5 text-amber-600" />
               <DialogTitle>Possible Duplicate Incidents</DialogTitle>
             </div>
             <DialogDescription>
@@ -294,10 +294,10 @@ export function LogIncidentPage() {
             </DialogDescription>
           </DialogHeader>
           <div className="space-y-2 max-h-48 overflow-y-auto">
-            {duplicates.map((dup, i) => (
-              <div key={i} className="flex items-center gap-3 p-3 rounded-lg bg-amber-500/5 border border-amber-500/20">
-                <TicketRef value={dup.cr4c3_ticketreference} />
-                <span className="text-sm text-slate-300 truncate">{dup.cr4c3_title}</span>
+            {duplicates.map((dup) => (
+            <div key={dup.cr4c3_ticketreference ?? dup.cr4c3_title} className="flex items-center gap-3 p-3 rounded-lg bg-amber-50 border border-amber-200">
+              <TicketRef value={dup.cr4c3_ticketreference} />
+              <span className="text-sm text-gray-700 truncate">{dup.cr4c3_title}</span>
               </div>
             ))}
           </div>

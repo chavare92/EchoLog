@@ -7,17 +7,22 @@ import './index.css';
 import App from './App.tsx';
 import { queryClient } from './lib/queryClient.ts';
 import { AuthProvider } from './auth/AuthProvider.tsx';
+import { ErrorBoundary } from './components/shared/ErrorBoundary.tsx';
+import { Toaster } from 'sonner';
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <JotaiProvider>
-      <QueryClientProvider client={queryClient}>
-        <BrowserRouter>
-          <AuthProvider>
-            <App />
-          </AuthProvider>
-        </BrowserRouter>
-      </QueryClientProvider>
-    </JotaiProvider>
+    <ErrorBoundary>
+      <JotaiProvider>
+        <QueryClientProvider client={queryClient}>
+          <BrowserRouter>
+            <AuthProvider>
+              <App />
+              <Toaster richColors position="top-right" />
+            </AuthProvider>
+          </BrowserRouter>
+        </QueryClientProvider>
+      </JotaiProvider>
+    </ErrorBoundary>
   </StrictMode>,
 );

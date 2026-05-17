@@ -26,7 +26,7 @@ export function PADetailPage() {
   const updatePA = useUpdatePA();
 
   if (isLoading) return <div className="p-6"><SkeletonCard /></div>;
-  if (!pa) return <div className="p-8 text-center text-slate-400">Preventive action not found.</div>;
+  if (!pa) return <div className="p-8 text-center text-gray-500">Preventive action not found.</div>;
 
   const overdue = pa.cr4c3_status !== PA_STATUS.Completed && isOverdue(pa.cr4c3_duedate);
   const progressValue =
@@ -64,13 +64,13 @@ export function PADetailPage() {
           <div className="flex items-center gap-2 flex-wrap">
             <StatusBadge status={pa.cr4c3_status} type="pa" />
             {overdue && (
-              <span className="flex items-center gap-1 text-xs text-red-400">
+              <span className="flex items-center gap-1 text-xs text-red-600">
                 <AlertTriangle className="w-3 h-3" />
                 Overdue
               </span>
             )}
           </div>
-          <h2 className="text-xl font-bold text-slate-100 mt-1">{pa.cr4c3_title}</h2>
+          <h2 className="text-xl font-bold text-gray-900 mt-1">{pa.cr4c3_title}</h2>
         </div>
         {nextStatus !== undefined && pa.cr4c3_status !== PA_STATUS.Completed && (
           <Button size="sm" onClick={advance} disabled={updatePA.isPending}>
@@ -89,8 +89,8 @@ export function PADetailPage() {
           {/* Description */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-3">Description</h3>
-              <p className="text-sm text-slate-300 leading-relaxed">
+              <h3 className="text-sm font-semibold text-gray-700 mb-3">Description</h3>
+              <p className="text-sm text-gray-700 leading-relaxed">
                 {pa.cr4c3_description ?? "No description provided."}
               </p>
             </GlassCard>
@@ -100,13 +100,13 @@ export function PADetailPage() {
           {incident && (
             <motion.div variants={itemVariants}>
               <GlassCard className="p-5">
-                <h3 className="text-sm font-semibold text-slate-300 mb-3">Linked Incident</h3>
+                <h3 className="text-sm font-semibold text-gray-700 mb-3">Linked Incident</h3>
                 <div
-                  className="flex items-center gap-3 p-3 rounded-lg bg-white/3 border border-white/8 cursor-pointer hover:bg-white/5"
+                  className="flex items-center gap-3 p-3 rounded-lg bg-gray-100 border border-gray-200 cursor-pointer hover:bg-gray-200"
                   onClick={() => navigate(`/incidents/${incident.cr4c3_incidentid}`)}
                 >
                   <TicketRef value={incident.cr4c3_ticketreference} />
-                  <span className="text-sm text-slate-200 flex-1 truncate">{incident.cr4c3_title}</span>
+                  <span className="text-sm text-gray-900 flex-1 truncate">{incident.cr4c3_title}</span>
                 </div>
               </GlassCard>
             </motion.div>
@@ -117,15 +117,15 @@ export function PADetailPage() {
         <div className="space-y-5">
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-4">Progress</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Progress</h3>
               <Progress value={progressValue} className="mb-3" />
-              <p className="text-xs text-slate-400 text-right">{progressValue}%</p>
+              <p className="text-xs text-gray-500 text-right">{progressValue}%</p>
             </GlassCard>
           </motion.div>
 
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-slate-300 mb-4">Details</h3>
+              <h3 className="text-sm font-semibold text-gray-700 mb-4">Details</h3>
               <dl className="space-y-3">
                 {[
                   { label: "Created", value: formatDateTime(pa.cr4c3_createdat) },
@@ -133,8 +133,8 @@ export function PADetailPage() {
                   { label: "Completed At", value: pa.cr4c3_completedat ? formatDateTime(pa.cr4c3_completedat) : "—" },
                 ].map(({ label, value }) => (
                   <div key={label}>
-                    <dt className="text-xs text-slate-400 uppercase tracking-wide">{label}</dt>
-                    <dd className={`text-sm mt-0.5 font-mono ${label === "Due Date" && overdue ? "text-red-400" : "text-slate-200"}`}>
+                    <dt className="text-xs text-gray-500 uppercase tracking-wide">{label}</dt>
+                    <dd className={`text-sm mt-0.5 font-mono ${label === "Due Date" && overdue ? "text-red-600" : "text-gray-900"}`}>
                       {value}
                     </dd>
                   </div>

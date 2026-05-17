@@ -7,7 +7,7 @@ interface PageWrapperProps {
 }
 
 const containerVariants = {
-  hidden: { opacity: 0 },
+  hidden: { opacity: 1 },
   show: {
     opacity: 1,
     transition: { staggerChildren: 0.06 },
@@ -15,7 +15,7 @@ const containerVariants = {
 };
 
 export const itemVariants = {
-  hidden: { opacity: 0, y: 12 },
+  hidden: { opacity: 1, y: 0 },
   show: { opacity: 1, y: 0, transition: { duration: 0.3 } },
 };
 
@@ -30,7 +30,7 @@ export function PageWrapper({ children, title, actions }: PageWrapperProps) {
       {(title ?? actions) && (
         <motion.div variants={itemVariants} className="flex items-center justify-between">
           {title && (
-            <h2 className="text-xl font-bold text-slate-100 tracking-tight">{title}</h2>
+            <h2 className="text-xl font-bold text-gray-900 tracking-tight">{title}</h2>
           )}
           {actions && <div className="flex items-center gap-2">{actions}</div>}
         </motion.div>

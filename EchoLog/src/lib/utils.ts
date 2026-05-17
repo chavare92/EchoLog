@@ -2,6 +2,27 @@ import { type ClassValue, clsx } from "clsx";
 import { twMerge } from "tailwind-merge";
 import { SEVERITY_TAT_HOURS, type SeverityKey } from "@/lib/constants";
 
+/**
+ * Unwraps a Power Apps / Dataverse IOperationResult.
+ * Throws a meaningful error when success === false so React Query
+ * correctly treats the call as a failed query / mutation.
+ */
+export function unwrapResult<T>(result: {
+  success: boolean;
+  data: T;
+  error?: Error | { message?: string } | unknown;
+}): T {
+  if (!result.success) {
+    const err = result.error;
+    if (err instanceof Error) throw err;
+    if (err && typeof err === "object" && "message" in err && typeof (err as { message?: string }).message === "string") {
+      throw new Error((err as { message: string }).message);
+    }
+    throw new Error("Dataverse operation failed. Check the connection and table permissions.");
+  }
+  return result.data;
+}
+
 export function cn(...inputs: ClassValue[]) {
   return twMerge(clsx(inputs));
 }

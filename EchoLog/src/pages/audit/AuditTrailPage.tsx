@@ -39,7 +39,7 @@ export function AuditTrailPage() {
     <PageWrapper title="Audit Trail">
       {/* Search */}
       <motion.div variants={itemVariants} className="relative max-w-sm">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
         <Input
           placeholder="Search audit logs…"
           className="pl-9"
@@ -55,7 +55,7 @@ export function AuditTrailPage() {
               <SkeletonTable rows={10} columns={5} />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-16 text-center text-slate-500 text-sm">No audit log entries found.</div>
+            <div className="py-16 text-center text-gray-400 text-sm">No audit log entries found.</div>
           ) : (
             <Table>
               <TableHeader>
@@ -70,13 +70,13 @@ export function AuditTrailPage() {
               <TableBody>
                 {filtered.map((log) => (
                   <TableRow key={log.cr4c3_auditlogid}>
-                    <TableCell className="font-mono text-xs text-slate-400 whitespace-nowrap">
+                    <TableCell className="font-mono text-xs text-gray-500 whitespace-nowrap">
                       {formatDateTime(log.cr4c3_timestamp)}
                     </TableCell>
-                    <TableCell className="text-sm text-slate-300">
+                    <TableCell className="text-sm text-gray-700">
                       <div>{getActorName(log._cr4c3_actor_value)}</div>
                       {log.cr4c3_actorrole && (
-                        <span className="text-xs text-slate-500">{log.cr4c3_actorrole}</span>
+                        <span className="text-xs text-gray-400">{log.cr4c3_actorrole}</span>
                       )}
                     </TableCell>
                     <TableCell>
@@ -84,18 +84,18 @@ export function AuditTrailPage() {
                         <Badge variant="secondary" className="text-xs">{log.cr4c3_entitytype}</Badge>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-slate-300 font-mono">
+                    <TableCell className="text-xs text-gray-700 font-mono">
                       {log.cr4c3_fieldchanged ?? "—"}
                     </TableCell>
                     <TableCell className="text-xs font-mono">
                       {log.cr4c3_oldvalue || log.cr4c3_newvalue ? (
                         <span>
-                          <span className="text-red-400 line-through mr-1">{log.cr4c3_oldvalue ?? "—"}</span>
-                          <span className="text-slate-400 mx-1">→</span>
-                          <span className="text-green-400">{log.cr4c3_newvalue ?? "—"}</span>
+                          <span className="text-red-600 line-through mr-1">{log.cr4c3_oldvalue ?? "—"}</span>
+                          <span className="text-gray-500 mx-1">→</span>
+                          <span className="text-green-600">{log.cr4c3_newvalue ?? "—"}</span>
                         </span>
                       ) : (
-                        <span className="text-slate-500 italic text-xs">{log.cr4c3_description ?? "—"}</span>
+                        <span className="text-gray-400 italic text-xs">{log.cr4c3_description ?? "—"}</span>
                       )}
                     </TableCell>
                   </TableRow>

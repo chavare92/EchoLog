@@ -8,46 +8,46 @@ const STATUS_CONFIG: Record<
 > = {
   [INCIDENT_STATUS.Open]: {
     label: "Open",
-    className: "bg-blue-500/15 text-blue-400 border-blue-500/20",
+    className: "bg-blue-50 text-blue-700 border-blue-200",
   },
   [INCIDENT_STATUS.InvestigationPending]: {
     label: "Investigation Pending",
-    className: "bg-amber-500/15 text-amber-300 border-amber-500/20",
+    className: "bg-amber-50 text-amber-700 border-amber-200",
   },
   [INCIDENT_STATUS.RCASubmitted]: {
     label: "RCA Submitted",
-    className: "bg-purple-500/15 text-purple-400 border-purple-500/20",
+    className: "bg-purple-50 text-purple-700 border-purple-200",
   },
   [INCIDENT_STATUS.RCAInReview]: {
     label: "RCA In Review",
-    className: "bg-indigo-500/15 text-indigo-400 border-indigo-500/20",
+    className: "bg-indigo-50 text-indigo-700 border-indigo-200",
   },
   [INCIDENT_STATUS.RCAApproved]: {
     label: "RCA Approved",
-    className: "bg-green-500/15 text-green-400 border-green-500/20",
+    className: "bg-green-50 text-green-700 border-green-200",
   },
   [INCIDENT_STATUS.RCARejected]: {
     label: "RCA Rejected",
-    className: "bg-red-500/15 text-red-400 border-red-500/20",
+    className: "bg-red-50 text-red-700 border-red-200",
   },
   [INCIDENT_STATUS.PAClosed]: {
     label: "PA Closed",
-    className: "bg-slate-500/15 text-slate-400 border-slate-500/20",
+    className: "bg-gray-100 text-gray-600 border-gray-300",
   },
 };
 
 const RCA_STATUS_CONFIG: Record<number, { label: string; className: string }> = {
-  564060000: { label: "Draft", className: "bg-slate-500/15 text-slate-400 border-slate-500/20" },
-  564060001: { label: "Submitted", className: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
-  564060002: { label: "Under Review", className: "bg-amber-500/15 text-amber-300 border-amber-500/20" },
-  564060003: { label: "Approved", className: "bg-green-500/15 text-green-400 border-green-500/20" },
-  564060004: { label: "Rejected", className: "bg-red-500/15 text-red-400 border-red-500/20" },
+  564060000: { label: "Draft", className: "bg-gray-100 text-gray-600 border-gray-300" },
+  564060001: { label: "Submitted", className: "bg-blue-50 text-blue-700 border-blue-200" },
+  564060002: { label: "Under Review", className: "bg-amber-50 text-amber-700 border-amber-200" },
+  564060003: { label: "Approved", className: "bg-green-50 text-green-700 border-green-200" },
+  564060004: { label: "Rejected", className: "bg-red-50 text-red-700 border-red-200" },
 };
 
 const PA_STATUS_CONFIG: Record<number, { label: string; className: string }> = {
-  564060000: { label: "Not Started", className: "bg-slate-500/15 text-slate-400 border-slate-500/20" },
-  564060001: { label: "In Progress", className: "bg-blue-500/15 text-blue-400 border-blue-500/20" },
-  564060002: { label: "Completed", className: "bg-green-500/15 text-green-400 border-green-500/20" },
+  564060000: { label: "Not Started", className: "bg-gray-100 text-gray-600 border-gray-300" },
+  564060001: { label: "In Progress", className: "bg-blue-50 text-blue-700 border-blue-200" },
+  564060002: { label: "Completed", className: "bg-green-50 text-green-700 border-green-200" },
 };
 
 interface StatusBadgeProps {
@@ -61,7 +61,7 @@ export function StatusBadge({ status, type = "incident", className }: StatusBadg
 
   const configMap =
     type === "rca" ? RCA_STATUS_CONFIG : type === "pa" ? PA_STATUS_CONFIG : STATUS_CONFIG;
-  const config = configMap[status] ?? { label: String(status), className: "bg-slate-500/15 text-slate-400" };
+  const config = configMap[status] ?? { label: String(status), className: "bg-gray-100 text-gray-600" };
 
   return (
     <span

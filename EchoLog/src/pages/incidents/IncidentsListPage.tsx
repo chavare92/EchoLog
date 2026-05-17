@@ -52,7 +52,7 @@ export function IncidentsListPage() {
       {/* Filters */}
       <motion.div variants={itemVariants} className="flex flex-wrap gap-3">
         <div className="relative flex-1 min-w-[200px]">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-500" />
           <Input
             placeholder="Search by title or ticket…"
             className="pl-9"
@@ -61,7 +61,7 @@ export function IncidentsListPage() {
           />
         </div>
         <div className="flex items-center gap-2">
-          <Filter className="w-4 h-4 text-slate-400" />
+          <Filter className="w-4 h-4 text-gray-500" />
           <Select value={statusFilter} onValueChange={setStatusFilter}>
             <SelectTrigger className="w-44">
               <SelectValue placeholder="All statuses" />
@@ -85,7 +85,7 @@ export function IncidentsListPage() {
             </SelectContent>
           </Select>
         </div>
-        <p className="text-xs text-slate-500 self-center">
+        <p className="text-xs text-gray-400 self-center">
           {filtered.length} incident{filtered.length !== 1 ? "s" : ""}
         </p>
       </motion.div>
@@ -97,7 +97,7 @@ export function IncidentsListPage() {
               <SkeletonTable rows={8} columns={6} />
             </div>
           ) : filtered.length === 0 ? (
-            <div className="py-16 text-center text-slate-500 text-sm">
+            <div className="py-16 text-center text-gray-400 text-sm">
               No incidents match your filters.
             </div>
           ) : (
@@ -123,7 +123,7 @@ export function IncidentsListPage() {
                       <TicketRef value={inc.cr4c3_ticketreference} />
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <span className="truncate block text-slate-200">{inc.cr4c3_title}</span>
+                      <span className="truncate block text-gray-900">{inc.cr4c3_title}</span>
                     </TableCell>
                     <TableCell>
                       <SeverityBadge severity={inc.cr4c3_severity} />
@@ -134,7 +134,7 @@ export function IncidentsListPage() {
                     <TableCell>
                       <TATCountdown dueDate={inc.cr4c3_duedate} />
                     </TableCell>
-                    <TableCell className="text-xs text-slate-400 font-mono">
+                    <TableCell className="text-xs text-gray-500 font-mono">
                       {formatDateTime(inc.cr4c3_createdat)}
                     </TableCell>
                   </TableRow>

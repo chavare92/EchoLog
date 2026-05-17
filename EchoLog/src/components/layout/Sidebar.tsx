@@ -51,23 +51,23 @@ export function Sidebar() {
     cn(
       "group flex items-center gap-3 rounded-lg px-3 py-2 text-sm font-medium transition-all",
       isActive
-        ? "bg-amber-500/15 text-amber-300 border border-amber-500/20"
-        : "text-slate-400 hover:bg-white/5 hover:text-slate-200"
+        ? "bg-amber-50 text-amber-700 border border-amber-200"
+        : "text-gray-600 hover:bg-gray-100 hover:text-gray-900"
     );
 
   return (
-    <aside className="flex flex-col w-60 min-h-screen bg-slate-950/80 border-r border-white/8 px-3 py-4 gap-1">
+    <aside className="flex flex-col w-60 min-h-screen bg-white border-r border-gray-200 px-3 py-4 gap-1">
       {/* Logo */}
       <button
         onClick={() => navigate("/")}
         className="flex items-center gap-2.5 px-3 py-2 mb-4"
       >
-        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/20">
-          <Zap className="w-4 h-4 text-amber-400" />
+        <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 border border-amber-200">
+          <Zap className="w-4 h-4 text-amber-600" />
         </div>
         <div>
-          <span className="font-bold text-slate-100 text-sm tracking-tight">ECHO LOG</span>
-          <p className="text-[10px] text-slate-500 leading-none mt-0.5">v1.4</p>
+          <span className="font-bold text-gray-900 text-sm tracking-tight">ECHO LOG</span>
+          <p className="text-[10px] text-gray-400 leading-none mt-0.5">v1.4</p>
         </div>
       </button>
 
@@ -81,7 +81,7 @@ export function Sidebar() {
             <item.icon className="w-4 h-4 shrink-0" />
             <span className="flex-1">{item.label}</span>
             {item.to === "/notifications" && notifCount > 0 && (
-              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-slate-900 text-[10px] font-bold">
+              <span className="flex items-center justify-center w-5 h-5 rounded-full bg-amber-500 text-white text-[10px] font-bold">
                 {notifCount > 9 ? "9+" : notifCount}
               </span>
             )}
@@ -92,7 +92,7 @@ export function Sidebar() {
         {isAdmin && (
           <>
             <div className="mt-4 mb-1 px-3">
-              <p className="text-[10px] uppercase tracking-widest text-slate-600 font-semibold">
+              <p className="text-[10px] uppercase tracking-widest text-gray-400 font-semibold">
                 Admin
               </p>
             </div>

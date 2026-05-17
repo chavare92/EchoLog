@@ -48,8 +48,8 @@ export function TopBar({ title }: TopBarProps) {
     .toUpperCase() ?? "U";
 
   return (
-    <header className="h-14 flex items-center justify-between px-6 border-b border-white/8 bg-slate-950/60 backdrop-blur-sm">
-      <h1 className="text-sm font-semibold text-slate-300">{title ?? "ECHO LOG"}</h1>
+    <header className="h-14 flex items-center justify-between px-6 border-b border-gray-200 bg-white">
+      <h1 className="text-sm font-semibold text-gray-900">{title ?? "ECHO LOG"}</h1>
 
       <div className="flex items-center gap-2">
         {/* Notification bell */}
@@ -61,30 +61,28 @@ export function TopBar({ title }: TopBarProps) {
         >
           <Bell className="h-4 w-4" />
           {notifCount > 0 && (
-            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-slate-950" />
+            <span className="absolute top-1 right-1 w-2 h-2 rounded-full bg-amber-500 ring-2 ring-white" />
           )}
         </Button>
 
         {/* User menu */}
         <DropdownMenu>
-          <DropdownMenuTrigger asChild>
-            <button className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-white/5 transition-colors">
-              <div className="w-7 h-7 rounded-full bg-amber-500/20 border border-amber-500/30 flex items-center justify-center text-xs font-bold text-amber-300">
+          <DropdownMenuTrigger className="flex items-center gap-2 rounded-lg px-2 py-1.5 hover:bg-gray-100 transition-colors focus:outline-none">
+              <div className="w-7 h-7 rounded-full bg-amber-100 border border-amber-200 flex items-center justify-center text-xs font-bold text-amber-700">
                 {initials}
               </div>
               <div className="text-left hidden sm:block">
-                <p className="text-xs font-medium text-slate-200 leading-none">{user?.cr4c3_fullname ?? "User"}</p>
-                <p className="text-[10px] text-slate-500 mt-0.5">
+                <p className="text-xs font-medium text-gray-900 leading-none">{user?.cr4c3_fullname ?? "User"}</p>
+                <p className="text-[10px] text-gray-500 mt-0.5">
                   {user?.cr4c3_role !== undefined ? (ROLE_LABELS[user.cr4c3_role] ?? "Member") : "Member"}
                 </p>
               </div>
-              <ChevronDown className="w-3 h-3 text-slate-500 hidden sm:block" />
-            </button>
+              <ChevronDown className="w-3 h-3 text-gray-400 hidden sm:block" />
           </DropdownMenuTrigger>
           <DropdownMenuContent align="end" className="w-48">
             <DropdownMenuLabel className="font-normal">
-              <p className="text-sm font-medium text-slate-200">{user?.cr4c3_fullname}</p>
-              <p className="text-xs text-slate-400 truncate">{user?.cr4c3_email}</p>
+                <p className="text-sm font-medium text-gray-900">{user?.cr4c3_fullname}</p>
+                <p className="text-xs text-gray-500 truncate">{user?.cr4c3_email}</p>
             </DropdownMenuLabel>
             <DropdownMenuSeparator />
             <DropdownMenuItem onClick={() => navigate("/notifications")}>
@@ -96,7 +94,7 @@ export function TopBar({ title }: TopBarProps) {
               Profile
             </DropdownMenuItem>
             <DropdownMenuSeparator />
-            <DropdownMenuItem onClick={handleLogout} className="text-red-400 focus:text-red-300 focus:bg-red-500/10">
+              <DropdownMenuItem onClick={handleLogout} className="text-red-600 focus:text-red-700 focus:bg-red-50">
               <LogOut className="mr-2 h-4 w-4" />
               Sign out
             </DropdownMenuItem>

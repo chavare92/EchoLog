@@ -43,7 +43,7 @@ export function ReviewQueuePage() {
   if (!isAdmin && !isL1Manager && !isL2Manager) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-slate-400">You don't have permission to access the review queue.</p>
+        <p className="text-gray-500">You don't have permission to access the review queue.</p>
       </div>
     );
   }
@@ -51,7 +51,9 @@ export function ReviewQueuePage() {
   const pendingRCAs = (allRCAs ?? []).filter(
     (r) =>
       r.cr4c3_status === RCA_STATUS.Submitted ||
-      r.cr4c3_status === RCA_STATUS.UnderReview
+      r.cr4c3_status === RCA_STATUS.UnderReview ||
+      r.cr4c3_status === RCA_STATUS.PendingL1Review ||
+      r.cr4c3_status === RCA_STATUS.PendingL2Review
   );
 
   const getIncident = (rcaIncidentId: string | undefined) =>
@@ -105,9 +107,9 @@ export function ReviewQueuePage() {
       ) : pendingRCAs.length === 0 ? (
         <motion.div variants={itemVariants}>
           <GlassCard className="py-16 text-center">
-            <CheckCircle className="w-10 h-10 text-green-400 mx-auto mb-3" />
-            <p className="text-slate-300 font-medium">All caught up!</p>
-            <p className="text-sm text-slate-500 mt-1">No RCA submissions pending review.</p>
+            <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-3" />
+            <p className="text-gray-700 font-medium">All caught up!</p>
+            <p className="text-sm text-gray-400 mt-1">No RCA submissions pending review.</p>
           </GlassCard>
         </motion.div>
       ) : (
@@ -123,17 +125,17 @@ export function ReviewQueuePage() {
                         {inc && <TicketRef value={inc.cr4c3_ticketreference} />}
                         {inc && <SeverityBadge severity={inc.cr4c3_severity} />}
                         <StatusBadge status={rca.cr4c3_status} type="rca" />
-                        <span className="text-xs text-slate-500">
+                        <span className="text-xs text-gray-400">
                           <Clock className="inline w-3 h-3 mr-0.5" />
                           {formatDateTime(rca.cr4c3_submittedat)}
                         </span>
                       </div>
-                      <p className="text-base font-semibold text-slate-100 truncate">{rca.cr4c3_rcatitle}</p>
+                      <p className="text-base font-semibold text-gray-900 truncate">{rca.cr4c3_rcatitle}</p>
                       {inc && (
-                        <p className="text-xs text-slate-400 mt-0.5 truncate">{inc.cr4c3_title}</p>
+                        <p className="text-xs text-gray-500 mt-0.5 truncate">{inc.cr4c3_title}</p>
                       )}
                       {rca.cr4c3_effectstatement && (
-                        <p className="text-sm text-slate-400 mt-2 line-clamp-2">{rca.cr4c3_effectstatement}</p>
+                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">{rca.cr4c3_effectstatement}</p>
                       )}
                       {inc && (
                         <div className="mt-2">
@@ -189,7 +191,7 @@ export function ReviewQueuePage() {
           </DialogHeader>
           <div className="space-y-3">
             <Label htmlFor="review-comment">
-              Review Comment <span className="text-red-400">*</span>
+              Review Comment <span className="text-red-600">*</span>
             </Label>
             <Textarea
               id="review-comment"
@@ -198,7 +200,7 @@ export function ReviewQueuePage() {
               placeholder="Add your review comments here…"
               rows={4}
             />
-            {commentError && <p className="text-xs text-red-400">{commentError}</p>}
+            {commentError && <p className="text-xs text-red-600">{commentError}</p>}
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedRCA(null)}>Cancel</Button>

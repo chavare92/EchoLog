@@ -1,5 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { Cr4c3_auditlogsService } from "@/generated/services/Cr4c3_auditlogsService";
+import { unwrapResult } from "@/lib/utils";
 
 export const AUDIT_KEY = "audit-logs";
 
@@ -15,7 +16,7 @@ export function useAuditLogs(incidentId?: string, paId?: string) {
         filter,
         orderBy: ["cr4c3_timestamp desc"],
       });
-      return result.data ?? [];
+      return unwrapResult(result) ?? [];
     },
   });
 }
