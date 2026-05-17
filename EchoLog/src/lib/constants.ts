@@ -22,6 +22,7 @@ export const INCIDENT_STATUS = {
   RCAApproved: 564060004,
   RCARejected: 564060005,
   PAClosed: 564060006,
+  Cancelled: 564060007,
 } as const;
 
 export type IncidentStatusKey = keyof typeof INCIDENT_STATUS;
@@ -35,6 +36,7 @@ export const RCA_STATUS = {
   Rejected: 564060004,
   PendingL1Review: 564060005,
   PendingL2Review: 564060006,
+  Escalated: 564060007,
 } as const;
 
 export type RCAStatusKey = keyof typeof RCA_STATUS;
@@ -87,3 +89,19 @@ export const NOTIFICATION_TYPE = {
   Success: 564060002,
   Error: 564060003,
 } as const;
+
+// ─── Audit Action ─────────────────────────────────────────────────────────────
+export const AUDIT_ACTION = {
+  Created: 1,
+  Approved: 2,
+  Rejected: 3,
+  Updated: 4,
+  Submitted: 5,
+  Escalated: 6,
+  Closed: 7,
+  Assigned: 8,
+  Reopened: 9,
+  Cancelled: 10,
+} as const;
+
+export type AuditActionKey = keyof typeof AUDIT_ACTION;

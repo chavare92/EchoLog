@@ -31,8 +31,15 @@ export function NotificationsPage() {
   const markRead = useMarkNotificationRead();
   const markAllRead = useMarkAllNotificationsRead();
 
-  const unread = (notifications ?? []).filter((n) => !n.cr4c3_isread);
-  const read = (notifications ?? []).filter((n) => n.cr4c3_isread);
+  // PRD §8: filter to last 30 days only
+  const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000);
+  const recentNotifications = (notifications ?? []).filter((n) => {
+    if (!n.cr4c3_createdat) return true;
+    return new Date(n.cr4c3_createdat) >= thirtyDaysAgo;
+  });
+
+  const unread = recentNotifications.filter((n) => !n.cr4c3_isread);
+  const read = recentNotifications.filter((n) => n.cr4c3_isread);
 
   const handleClick = async (id: string, isRead?: boolean) => {
     if (!isRead) {

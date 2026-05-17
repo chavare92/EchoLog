@@ -1,6 +1,23 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Plus, Pencil, Trash2 } from "lucide-react";
+import { Plus, Pencil, Trash2, GripVertical } from "lucide-react";
+import {
+  DndContext,
+  closestCenter,
+  KeyboardSensor,
+  PointerSensor,
+  useSensor,
+  useSensors,
+  type DragEndEvent,
+} from "@dnd-kit/core";
+import {
+  arrayMove,
+  SortableContext,
+  sortableKeyboardCoordinates,
+  useSortable,
+  verticalListSortingStrategy,
+} from "@dnd-kit/sortable";
+import { CSS } from "@dnd-kit/utilities";
 import { useRoleGuard } from "@/auth/useRoleGuard";
 import {
   useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment,
@@ -63,6 +80,30 @@ export function HierarchyPage() {
   );
 }
 
+// ── Sortable Row ──────────────────────────────────────────────────────────────
+
+function SortableRow({
+  id,
+  children,
+}: {
+  id: string;
+  children: (dragProps: { isDragging: boolean; handleProps: React.HTMLAttributes<HTMLButtonElement> }) => React.ReactNode;
+}) {
+  const { attributes, listeners, setNodeRef, transform, transition, isDragging } = useSortable({ id });
+  const style: React.CSSProperties = {
+    transform: CSS.Transform.toString(transform),
+    transition,
+    opacity: isDragging ? 0.5 : 1,
+    position: "relative",
+    zIndex: isDragging ? 10 : undefined,
+  };
+  return (
+    <tr ref={setNodeRef} style={style}>
+      {children({ isDragging, handleProps: { ...attributes, ...listeners } as React.HTMLAttributes<HTMLButtonElement> })}
+    </tr>
+  );
+}
+
 // ── Departments ────────────────────────────────────────────────────────────────
 
 function DepartmentsTab() {
@@ -79,6 +120,29 @@ function DepartmentsTab() {
   const [editName, setEditName] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [err, setErr] = useState("");
+
+  // Local drag-order (session only — no sort field in model)
+  const [order, setOrder] = useState<string[]>([]);
+  const ids = order.length > 0 ? order : (departments ?? []).map((d) => d.cr4c3_departmentid!).filter(Boolean);
+  const sorted = ids
+    .map((id) => (departments ?? []).find((d) => d.cr4c3_departmentid === id))
+    .filter(Boolean) as Cr4c3_departmentsBase[];
+
+  const sensors = useSensors(
+    useSensor(PointerSensor),
+    useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
+  );
+
+  const handleDragEnd = (event: DragEndEvent) => {
+    const { active, over } = event;
+    if (!over || active.id === over.id) return;
+    setOrder((prev) => {
+      const base = prev.length > 0 ? prev : ids;
+      const oldIndex = base.indexOf(String(active.id));
+      const newIndex = base.indexOf(String(over.id));
+      return arrayMove(base, oldIndex, newIndex);
+    });
+  };
 
   const handleAdd = async () => {
     setErr("");
@@ -106,40 +170,71 @@ function DepartmentsTab() {
   return (
     <>
       <GlassCard>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-          <h3 className="text-sm font-semibold text-gray-700">Departments ({departments?.length ?? 0})</h3>
-          <Button size="sm" onClick={() => { setErr(""); setAddOpen(true); }}><Plus className="w-4 h-4 mr-1" />Add</Button>
+        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
+          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+            Departments ({departments?.length ?? 0})
+            {order.length > 0 && (
+              <span className="ml-2 text-xs text-amber-600 font-normal">reordered</span>
+            )}
+          </h3>
+          <Button size="sm" onClick={() => { setErr(""); setAddOpen(true); }}>
+            <Plus className="w-4 h-4 mr-1" />Add
+          </Button>
         </div>
         {isLoading ? (
           <div className="p-4"><SkeletonTable rows={5} columns={3} /></div>
-        ) : (departments ?? []).length === 0 ? (
+        ) : sorted.length === 0 ? (
           <div className="p-8 text-center text-gray-400 text-sm">No departments yet.</div>
         ) : (
-          <Table>
-            <TableHeader><TableRow>
-              <TableHead>Name</TableHead>
-              <TableHead>Description</TableHead>
-              <TableHead className="w-24 text-right">Actions</TableHead>
-            </TableRow></TableHeader>
-            <TableBody>
-              {(departments ?? []).map((d) => (
-                <TableRow key={d.cr4c3_departmentid}>
-                  <TableCell className="font-medium text-gray-900">{d.cr4c3_name}</TableCell>
-                  <TableCell className="text-sm text-gray-500">{d.cr4c3_description ?? "—"}</TableCell>
-                  <TableCell className="text-right">
-                    <div className="flex items-center justify-end gap-1">
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(d)}>
-                        <Pencil className="w-3.5 h-3.5 text-gray-500" />
-                      </Button>
-                      <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteId(d.cr4c3_departmentid!)}>
-                        <Trash2 className="w-3.5 h-3.5 text-red-500" />
-                      </Button>
-                    </div>
-                  </TableCell>
+          <DndContext sensors={sensors} collisionDetection={closestCenter} onDragEnd={handleDragEnd}>
+            <Table>
+              <TableHeader>
+                <TableRow>
+                  <TableHead className="w-8"></TableHead>
+                  <TableHead>Name</TableHead>
+                  <TableHead>Description</TableHead>
+                  <TableHead className="w-24 text-right">Actions</TableHead>
                 </TableRow>
-              ))}
-            </TableBody>
-          </Table>
+              </TableHeader>
+              <TableBody>
+                <SortableContext items={ids} strategy={verticalListSortingStrategy}>
+                  {sorted.map((d) => (
+                    <SortableRow key={d.cr4c3_departmentid} id={d.cr4c3_departmentid!}>
+                      {({ isDragging, handleProps }) => (
+                        <>
+                          <TableCell className="w-8 px-2">
+                            <button
+                              {...handleProps}
+                              className="cursor-grab active:cursor-grabbing p-1 text-gray-300 hover:text-gray-500 focus:outline-none focus-visible:ring-1 focus-visible:ring-primary rounded"
+                              aria-label="Drag to reorder"
+                            >
+                              <GripVertical className="w-4 h-4" />
+                            </button>
+                          </TableCell>
+                          <TableCell className={`font-medium ${isDragging ? "text-gray-400" : "text-gray-900 dark:text-gray-100"}`}>
+                            {d.cr4c3_name}
+                          </TableCell>
+                          <TableCell className="text-sm text-gray-500 dark:text-gray-400">
+                            {d.cr4c3_description ?? "—"}
+                          </TableCell>
+                          <TableCell className="text-right">
+                            <div className="flex items-center justify-end gap-1">
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => openEdit(d)}>
+                                <Pencil className="w-3.5 h-3.5 text-gray-500" />
+                              </Button>
+                              <Button variant="ghost" size="sm" className="h-7 w-7 p-0" onClick={() => setDeleteId(d.cr4c3_departmentid!)}>
+                                <Trash2 className="w-3.5 h-3.5 text-red-500" />
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </>
+                      )}
+                    </SortableRow>
+                  ))}
+                </SortableContext>
+              </TableBody>
+            </Table>
+          </DndContext>
         )}
       </GlassCard>
 

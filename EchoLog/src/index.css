@@ -260,3 +260,54 @@
     transition: background-color 0.3s ease, border-color 0.3s ease, color 0.2s ease !important;
   }
 }
+
+/* ─── Print Styles — PRD §7.2 ───────────────────────────────────────────────── */
+@media print {
+  /* Hide chrome */
+  aside,
+  nav,
+  [data-sidebar],
+  [data-topbar],
+  button:not([data-print-visible]),
+  .no-print {
+    display: none !important;
+  }
+
+  body {
+    background: white !important;
+    color: black !important;
+    font-size: 12pt;
+    line-height: 1.5;
+  }
+
+  /* Remove glass / backdrop effects */
+  .backdrop-blur-sm,
+  .backdrop-blur {
+    backdrop-filter: none !important;
+  }
+
+  /* Expand all content for print */
+  main,
+  [data-main-content] {
+    margin: 0 !important;
+    padding: 0 !important;
+    max-width: 100% !important;
+  }
+
+  /* Page breaks */
+  h2, h3 {
+    page-break-after: avoid;
+  }
+
+  .glass-card,
+  table {
+    page-break-inside: avoid;
+    border: 1px solid #ddd !important;
+    box-shadow: none !important;
+  }
+
+  a {
+    text-decoration: none !important;
+    color: inherit !important;
+  }
+}

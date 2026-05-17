@@ -1,19 +1,10 @@
 import { atom } from "jotai";
 import type { Cr4c3_userprofilesBase } from "@/generated/models/Cr4c3_userprofilesModel";
 
-const SESSION_KEY = "echolog_user";
-
-function loadPersistedUser(): Cr4c3_userprofilesBase | null {
-  try {
-    const raw = sessionStorage.getItem(SESSION_KEY);
-    return raw ? (JSON.parse(raw) as Cr4c3_userprofilesBase) : null;
-  } catch {
-    return null;
-  }
-}
-
-export const currentUserAtom = atom<Cr4c3_userprofilesBase | null>(loadPersistedUser());
+// PRD §2.5: Credentials stored in-memory only. No persistence across page refreshes.
+export const currentUserAtom = atom<Cr4c3_userprofilesBase | null>(null);
 
 export const isAuthenticatedAtom = atom((get) => get(currentUserAtom) !== null);
 
-export const SESSION_STORAGE_KEY = SESSION_KEY;
+/** @deprecated No longer used — kept for import compatibility during transition */
+export const SESSION_STORAGE_KEY = "echolog_user";

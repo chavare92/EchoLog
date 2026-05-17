@@ -1,8 +1,9 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { motion } from "framer-motion";
-import { GitBranch, Search } from "lucide-react";
+import { GitBranch, Search, AlertTriangle } from "lucide-react";
 import { useAuditLogs } from "@/hooks/useAuditLogs";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
+import { computeAuditChecksum } from "@/lib/roleUtils";
 import type { Cr4c3_auditlogsBase } from "@/generated/models/Cr4c3_auditlogsModel";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -56,8 +57,36 @@ export function AuditTrailPage() {
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
+  // Map of auditlogid → true if integrity check failed
+  const [integrityWarnings, setIntegrityWarnings] = useState<Record<string, boolean>>({});
 
   const getUserName = (id?: string) => userProfiles?.find((u) => u.cr4c3_userprofileid === id)?.cr4c3_fullname ?? "System";
+
+  // PRD §7.1: verify checksums for logs that have a stored checksum
+  useEffect(() => {
+    if (!allLogs) return;
+    const logsWithChecksum = allLogs.filter((l) => (l as Record<string, unknown>)["cr4c3_checksum"]);
+    if (logsWithChecksum.length === 0) return;
+
+    (async () => {
+      const warnings: Record<string, boolean> = {};
+      await Promise.all(logsWithChecksum.map(async (log) => {
+        const storedChecksum = (log as Record<string, unknown>)["cr4c3_checksum"] as string;
+        const computed = await computeAuditChecksum({
+          entityId: log.cr4c3_entityid ?? "",
+          action: String(log.cr4c3_action ?? log.cr4c3_description ?? ""),
+          actor: log._cr4c3_actor_value ?? "",
+          timestamp: log.cr4c3_timestamp ?? "",
+          oldValue: log.cr4c3_oldvalue ?? "",
+          newValue: log.cr4c3_newvalue ?? "",
+        });
+        if (computed !== storedChecksum) {
+          warnings[log.cr4c3_auditlogid as string] = true;
+        }
+      }));
+      setIntegrityWarnings(warnings);
+    })();
+  }, [allLogs]);
 
   const entityTypes = useMemo(() => {
     const types = new Set((allLogs ?? []).map((l) => l.cr4c3_entitytype).filter(Boolean) as string[]);
@@ -196,6 +225,13 @@ export function AuditTrailPage() {
                               <Badge variant="outline" className="text-xs font-normal">
                                 {log.cr4c3_entitytype}
                               </Badge>
+                            )}
+                            {integrityWarnings[log.cr4c3_auditlogid as string] && (
+                              <span className="inline-flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-semibold bg-red-100 text-red-700 border border-red-200"
+                                title="Checksum mismatch — this log entry may have been tampered with">
+                                <AlertTriangle className="w-3 h-3" aria-hidden="true" />
+                                Integrity Warning
+                              </span>
                             )}
                           </div>
                           <time className="text-xs text-gray-400 font-mono">

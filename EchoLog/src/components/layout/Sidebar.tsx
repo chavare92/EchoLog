@@ -16,11 +16,15 @@ import {
   PanelLeftClose,
   PanelLeftOpen,
   X,
+  UserCheck,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { useRoleGuard } from "@/auth/useRoleGuard";
+import { currentUserAtom } from "@/store/authAtoms";
 import { activeNotificationCountAtom, mobileSidebarOpenAtom, sidebarCollapsedAtom } from "@/store/uiAtoms";
 import { useIsMobile } from "@/hooks/useMediaQuery";
+import { useActiveDelegations } from "@/hooks/useDelegations";
+import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 
 interface NavItem {
@@ -49,6 +53,7 @@ const ADMIN_NAV_ITEMS: NavItem[] = [
 
 export function Sidebar() {
   const { isAdmin, canReview } = useRoleGuard();
+  const user = useAtomValue(currentUserAtom);
   const notifCount = useAtomValue(activeNotificationCountAtom);
   const navigate = useNavigate();
   const isMobile = useIsMobile();
@@ -57,6 +62,17 @@ export function Sidebar() {
   const setMobileSidebarOpen = useSetAtom(mobileSidebarOpenAtom);
   const sidebarCollapsed = useAtomValue(sidebarCollapsedAtom);
   const setSidebarCollapsed = useSetAtom(sidebarCollapsedAtom);
+
+  // Delegation banner: show if this user is actively delegated by someone
+  const { data: activeDelegations } = useActiveDelegations(user?.cr4c3_userprofileid);
+  const { data: userProfiles } = useUserProfiles();
+  const firstDelegation = activeDelegations?.[0];
+  const delegatorName = firstDelegation
+    ? (userProfiles?.find((u) => u.cr4c3_userprofileid === firstDelegation._cr4c3_delegator_value)?.cr4c3_fullname ?? "Someone")
+    : null;
+  const delegationUntil = firstDelegation?.cr4c3_enddate
+    ? new Date(firstDelegation.cr4c3_enddate).toLocaleDateString()
+    : null;
 
   const isCollapsed = !isMobile && sidebarCollapsed;
 
@@ -169,6 +185,21 @@ export function Sidebar() {
           </button>
         )}
       </div>
+
+      {/* Acting delegate banner — PRD §2.3 */}
+      {!isCollapsed && firstDelegation && delegatorName && (
+        <div className="mb-3 rounded-lg bg-amber-50 dark:bg-amber-950/40 border border-amber-200 dark:border-amber-800 px-3 py-2">
+          <div className="flex items-start gap-2">
+            <UserCheck className="w-3.5 h-3.5 text-amber-600 flex-shrink-0 mt-0.5" aria-hidden="true" />
+            <div>
+              <p className="text-[11px] font-semibold text-amber-800 dark:text-amber-300">Acting for {delegatorName}</p>
+              {delegationUntil && (
+                <p className="text-[10px] text-amber-600 dark:text-amber-500">Until {delegationUntil}</p>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Main nav */}
       <nav className="flex flex-col gap-0.5 flex-1" aria-label="Primary">

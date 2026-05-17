@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useMemo } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAtomValue } from "jotai";
 import { motion } from "framer-motion";
@@ -16,19 +16,24 @@ import {
   PlusCircle,
   Download,
   Pencil,
+  RotateCcw,
+  XCircle,
+  PlayCircle,
+  Search,
 } from "lucide-react";
 import { currentUserAtom } from "@/store/authAtoms";
 import { useIncident, useUpdateIncident } from "@/hooks/useIncidents";
 import { useRCASubmissions, useCreateRCA } from "@/hooks/useRCASubmissions";
 import { usePreventiveActions, useCreatePA } from "@/hooks/usePreventiveActions";
-import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { useAuditLogs, useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useSubdepartments } from "@/hooks/useSubdepartments";
 import { useProcesses } from "@/hooks/useProcesses";
 import { useTeams } from "@/hooks/useTeams";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
+import { useCreateNotification } from "@/hooks/useNotifications";
 import { useRoleGuard } from "@/auth/useRoleGuard";
-import { INCIDENT_STATUS, RCA_STATUS, PA_STATUS, SEVERITY } from "@/lib/constants";
+import { INCIDENT_STATUS, RCA_STATUS, PA_STATUS, SEVERITY, NOTIFICATION_TYPE } from "@/lib/constants";
 import { formatDateTime, formatDate, isOverdue, getRemainingTATMs, formatDuration } from "@/lib/utils";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -38,6 +43,7 @@ import { TATCountdown } from "@/components/shared/TATCountdown";
 import { TicketRef } from "@/components/shared/TicketRef";
 import { PulseIndicator } from "@/components/shared/PulseIndicator";
 import { SkeletonCard } from "@/components/shared/Skeletons";
+import { ConfirmDialog } from "@/components/shared/ConfirmDialog";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
@@ -60,7 +66,7 @@ export function IncidentDetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const user = useAtomValue(currentUserAtom);
-  const { isAssignee, isAdmin } = useRoleGuard();
+  const userId = user?.cr4c3_userprofileid;
 
   const { data: incident, isLoading } = useIncident(id);
   const { data: rcaList } = useRCASubmissions(id);
@@ -75,6 +81,11 @@ export function IncidentDetailPage() {
   const updateIncident = useUpdateIncident();
   const createRCA = useCreateRCA();
   const createPA = useCreatePA();
+  const createAuditLog = useCreateAuditLog();
+  const createNotification = useCreateNotification();
+
+  // ── Context-aware role resolution (PRD §2.3) ─────────────────────────────
+  const guard = useRoleGuard(useMemo(() => ({ incident }), [incident]));
 
   const [editDialogOpen, setEditDialogOpen] = useState(false);
   const [editTitle, setEditTitle] = useState("");
@@ -87,6 +98,8 @@ export function IncidentDetailPage() {
   const [paTitle, setPaTitle] = useState("");
   const [paDesc, setPaDesc] = useState("");
   const [paDueDate, setPaDueDate] = useState("");
+  const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
+  const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
 
   if (isLoading) return <div className="p-6"><SkeletonCard /></div>;
   if (!incident) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Incident not found.</div>;
@@ -101,15 +114,59 @@ export function IncidentDetailPage() {
   const overdue = isOverdue(incident.cr4c3_duedate);
   const remaining = incident.cr4c3_duedate ? getRemainingTATMs(incident.cr4c3_duedate) : null;
 
-  const canSubmitRCA =
-    (
-      incident.cr4c3_status === INCIDENT_STATUS.Open ||
-      incident.cr4c3_status === INCIDENT_STATUS.InvestigationPending ||
-      incident.cr4c3_status === INCIDENT_STATUS.RCARejected
-    ) &&
-    (isAssignee || isAdmin);
+  const status = incident.cr4c3_status;
+  const isMyIncident = incident._cr4c3_assignee_value === userId;
 
-  const canEdit = isAdmin || isAssignee;
+  // ── Transition guard conditions (PRD §3.2) ───────────────────────────────
+  const canStartInvestigation =
+    status === INCIDENT_STATUS.Open &&
+    (guard.isAssignee || guard.isAdmin) &&
+    isMyIncident;
+
+  const canSubmitRCA =
+    (status === INCIDENT_STATUS.Open ||
+      status === INCIDENT_STATUS.InvestigationPending ||
+      status === INCIDENT_STATUS.RCARejected) &&
+    (guard.isAssignee || guard.isAdmin) &&
+    (isMyIncident || guard.isAdmin);
+
+  const canCreatePA =
+    status === INCIDENT_STATUS.RCAApproved &&
+    (guard.isAdmin || guard.isAssignee);
+
+  const canEdit = guard.isAdmin || (guard.isAssignee && isMyIncident);
+
+  const canCancelIncident =
+    guard.canCancelIncident &&
+    status !== INCIDENT_STATUS.Cancelled &&
+    status !== INCIDENT_STATUS.PAClosed;
+
+  const canReopenIncident =
+    guard.canReopenIncident &&
+    status === INCIDENT_STATUS.PAClosed;
+
+  // ── Notification helper ───────────────────────────────────────────────────
+  async function notifyUser(recipientId: string | undefined, message: string) {
+    if (!recipientId) return;
+    createNotification.mutate({
+      cr4c3_message: message,
+      cr4c3_type: NOTIFICATION_TYPE.Info,
+      _cr4c3_incident_value: id,
+      cr4c3_createdat: new Date().toISOString(),
+    } as Record<string, unknown>);
+  }
+
+  async function writeAuditLog(_action: string, description: string, oldVal?: string, newVal?: string) {
+    createAuditLog.mutate({
+      cr4c3_entityid: id,
+      cr4c3_entitytype: "Incident",
+      cr4c3_description: description,
+      cr4c3_timestamp: new Date().toISOString(),
+      _cr4c3_actor_value: userId,
+      ...(oldVal !== undefined ? { cr4c3_oldvalue: oldVal } : {}),
+      ...(newVal !== undefined ? { cr4c3_newvalue: newVal } : {}),
+    } as Record<string, unknown>);
+  }
 
   const openEditDialog = () => {
     setEditTitle(incident.cr4c3_title ?? "");
@@ -133,14 +190,27 @@ export function IncidentDetailPage() {
     toast.success("Incident updated");
   };
 
-  const canCreatePA = incident.cr4c3_status === INCIDENT_STATUS.RCAApproved && (isAdmin || isAssignee);
-
-  const handleAssignToMe = async () => {
-    if (!user?.cr4c3_userprofileid) { toast.error("No user session"); return; }
+  // Start Investigation (Open → InvestigationPending)
+  const handleStartInvestigation = async () => {
     await updateIncident.mutateAsync({
       id: id!,
-      fields: { _cr4c3_assignee_value: user.cr4c3_userprofileid, cr4c3_status: INCIDENT_STATUS.InvestigationPending },
+      fields: { cr4c3_status: INCIDENT_STATUS.InvestigationPending, cr4c3_updatedat: new Date().toISOString() },
     });
+    writeAuditLog("StatusChanged", "Investigation started", "Open", "InvestigationPending");
+    toast.success("Investigation started");
+  };
+
+  const handleAssignToMe = async () => {
+    if (!userId) { toast.error("No user session"); return; }
+    await updateIncident.mutateAsync({
+      id: id!,
+      fields: {
+        _cr4c3_assignee_value: userId,
+        cr4c3_status: INCIDENT_STATUS.InvestigationPending,
+        cr4c3_updatedat: new Date().toISOString(),
+      },
+    });
+    writeAuditLog("Assigned", `Assigned to ${user?.cr4c3_fullname ?? "user"}`);
     toast.success("Assigned to you");
   };
 
@@ -152,9 +222,11 @@ export function IncidentDetailPage() {
       cr4c3_status: RCA_STATUS.Submitted,
       cr4c3_submittedat: new Date().toISOString(),
       _cr4c3_incident_value: id,
-      _cr4c3_submittedby_value: user?.cr4c3_userprofileid,
+      _cr4c3_submittedby_value: userId,
     });
-    await updateIncident.mutateAsync({ id: id!, fields: { cr4c3_status: INCIDENT_STATUS.RCASubmitted } });
+    await updateIncident.mutateAsync({ id: id!, fields: { cr4c3_status: INCIDENT_STATUS.RCASubmitted, cr4c3_updatedat: new Date().toISOString() } });
+    writeAuditLog("StatusChanged", "RCA submitted", "InvestigationPending", "RCASubmitted");
+    notifyUser(incident._cr4c3_loggedby_value, `RCA submitted for ${incident.cr4c3_ticketreference}`);
     setRcaDialogOpen(false);
     setRcaTitle("");
     setRcaEffect("");
@@ -169,14 +241,56 @@ export function IncidentDetailPage() {
       cr4c3_status: PA_STATUS.NotStarted,
       cr4c3_createdat: new Date().toISOString(),
       _cr4c3_incident_value: id,
-      _cr4c3_createdby_value: user?.cr4c3_userprofileid,
+      _cr4c3_createdby_value: userId,
       ...(paDueDate ? { cr4c3_duedate: paDueDate } : {}),
     });
+    writeAuditLog("Created", `Preventive action "${paTitle}" created`);
     setPaDialogOpen(false);
     setPaTitle("");
     setPaDesc("");
     setPaDueDate("");
     toast.success("Preventive action created");
+  };
+
+  // Cancel incident (Admin only)
+  const handleCancelIncident = async () => {
+    await updateIncident.mutateAsync({
+      id: id!,
+      fields: { cr4c3_status: INCIDENT_STATUS.Cancelled, cr4c3_updatedat: new Date().toISOString() },
+    });
+    writeAuditLog("StatusChanged", "Incident cancelled", undefined, "Cancelled");
+    notifyUser(incident._cr4c3_assignee_value, `Incident ${incident.cr4c3_ticketreference} has been cancelled`);
+    toast.success("Incident cancelled");
+  };
+
+  // Re-open incident (Admin/L2Manager) — PRD §3.3
+  const handleReopenIncident = async () => {
+    // 1. Reset status and SLA timer
+    await updateIncident.mutateAsync({
+      id: id!,
+      fields: {
+        cr4c3_status: INCIDENT_STATUS.InvestigationPending,
+        cr4c3_updatedat: new Date().toISOString(),
+      },
+    });
+    // 2. Create new linked RCA with parentRcaId pointing to original approved RCA
+    const approvedRCA = rcaList?.find((r) => r.cr4c3_status === RCA_STATUS.Approved);
+    if (approvedRCA) {
+      await createRCA.mutateAsync({
+        cr4c3_rcatitle: `${approvedRCA.cr4c3_rcatitle} — Reopened`,
+        cr4c3_effectstatement: "",
+        cr4c3_status: RCA_STATUS.Draft,
+        cr4c3_submittedat: undefined,
+        _cr4c3_incident_value: id,
+        _cr4c3_submittedby_value: userId,
+        cr4c3_parentrcaid: approvedRCA.cr4c3_rcasubmissionid,
+      } as Record<string, unknown>);
+    }
+    // 3. Audit log
+    writeAuditLog("Reopened", "Incident reopened — new investigation required", "PAClosed", "InvestigationPending");
+    notifyUser(incident._cr4c3_assignee_value, `Incident ${incident.cr4c3_ticketreference} has been reopened`);
+    setReopenDialogOpen(false);
+    toast.success("Incident reopened");
   };
 
   return (
@@ -218,10 +332,31 @@ export function IncidentDetailPage() {
                     Edit
                   </Button>
                 )}
-                {!incident._cr4c3_assignee_value && (isAssignee || isAdmin) && (
+                {!incident._cr4c3_assignee_value && (guard.isAssignee || guard.isAdmin) && (
                   <Button variant="outline" size="sm" onClick={handleAssignToMe}>
                     <UserCheck className="w-4 h-4 mr-1.5" aria-hidden="true" />
                     Assign to me
+                  </Button>
+                )}
+                {canStartInvestigation && (
+                  <Button size="sm" variant="outline" onClick={handleStartInvestigation}
+                    className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400">
+                    <PlayCircle className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                    Start Investigation
+                  </Button>
+                )}
+                {canReopenIncident && (
+                  <Button size="sm" variant="outline" onClick={() => setReopenDialogOpen(true)}
+                    className="border-indigo-300 text-indigo-700 hover:bg-indigo-50 dark:border-indigo-700 dark:text-indigo-400">
+                    <RotateCcw className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                    Reopen
+                  </Button>
+                )}
+                {canCancelIncident && (
+                  <Button size="sm" variant="outline" onClick={() => setCancelDialogOpen(true)}
+                    className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400">
+                    <XCircle className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                    Cancel
                   </Button>
                 )}
               </div>
@@ -311,8 +446,24 @@ export function IncidentDetailPage() {
                         <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Root Cause Analysis Required</p>
                         <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This incident is pending an RCA submission.</p>
                       </div>
-                      <Button size="sm" onClick={() => setRcaDialogOpen(true)}>
-                        Submit RCA
+                      <Button size="sm" onClick={() => navigate(`/incidents/${id}/rca`)}>
+                        <Search className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                        Open RCA Builder
+                      </Button>
+                    </div>
+                  </div>
+                )}
+                {canStartInvestigation && (
+                  <div className="rounded-xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border border-blue-200 dark:border-blue-800 p-5">
+                    <div className="flex items-center justify-between gap-4 flex-wrap">
+                      <div>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Ready to Investigate</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Start the investigation to move this incident forward.</p>
+                      </div>
+                      <Button size="sm" variant="outline" onClick={handleStartInvestigation}
+                        className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400">
+                        <PlayCircle className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                        Start Investigation
                       </Button>
                     </div>
                   </div>
@@ -628,6 +779,30 @@ export function IncidentDetailPage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+
+      {/* Cancel Incident (Admin only) */}
+      <ConfirmDialog
+        open={cancelDialogOpen}
+        onOpenChange={setCancelDialogOpen}
+        title="Cancel Incident"
+        description={`Are you sure you want to cancel ${incident.cr4c3_ticketreference}? This will halt all RCA and PA work for this incident.`}
+        variant="destructive"
+        onConfirm={handleCancelIncident}
+        confirmLabel="Cancel Incident"
+        isLoading={updateIncident.isPending}
+      />
+
+      {/* Reopen Incident (Admin / L2Manager) — PRD §3.3 */}
+      <ConfirmDialog
+        open={reopenDialogOpen}
+        onOpenChange={setReopenDialogOpen}
+        title="Reopen Incident"
+        description={`This will reopen ${incident.cr4c3_ticketreference} to Investigation Pending, reset the SLA timer, and create a new linked RCA. The existing approved RCA will be preserved.`}
+        variant="default"
+        onConfirm={handleReopenIncident}
+        confirmLabel="Reopen Incident"
+        isLoading={updateIncident.isPending || createRCA.isPending}
+      />
     </PageWrapper>
   );
 }

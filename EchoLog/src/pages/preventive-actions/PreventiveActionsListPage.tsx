@@ -1,8 +1,8 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, ShieldCheck, LayoutList, LayoutGrid, ArrowRight } from "lucide-react";
-import { usePreventiveActions } from "@/hooks/usePreventiveActions";
+import { Search, ShieldCheck, LayoutList, LayoutGrid, ArrowRight, Download, RefreshCw } from "lucide-react";
+import { usePreventiveActions, useUpdatePA } from "@/hooks/usePreventiveActions";
 import { useIncidents } from "@/hooks/useIncidents";
 import { PA_STATUS } from "@/lib/constants";
 import { isOverdue, formatDate } from "@/lib/utils";
@@ -17,6 +17,7 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
 type ViewMode = "list" | "board";
 
@@ -30,14 +31,16 @@ export function PreventiveActionsListPage() {
   const navigate = useNavigate();
   const { data: allPAs, isLoading } = usePreventiveActions();
   const { data: incidents } = useIncidents();
+  const updatePA = useUpdatePA();
 
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
+  const [bulkLoading, setBulkLoading] = useState(false);
 
-  const getIncidentRef = (incidentId?: string) =>
-    incidents?.find((i) => i.cr4c3_incidentid === incidentId)?.cr4c3_ticketreference;
+  const getIncident = (incidentId?: string) => incidents?.find((i) => i.cr4c3_incidentid === incidentId);
+  const getIncidentRef = (incidentId?: string) => getIncident(incidentId)?.cr4c3_ticketreference;
 
   const filtered = useMemo(() => {
     return (allPAs ?? []).filter((pa) => {
@@ -70,6 +73,53 @@ export function PreventiveActionsListPage() {
     } else {
       setSelectedIds(new Set(filtered.map((p) => p.cr4c3_preventiveactionid!)));
     }
+  };
+
+  // ── Bulk: Mark In Progress ────────────────────────────────────────────────
+  const handleBulkMarkInProgress = async () => {
+    setBulkLoading(true);
+    try {
+      await Promise.all(
+        Array.from(selectedIds).map((id) =>
+          updatePA.mutateAsync({ id, fields: { cr4c3_status: PA_STATUS.InProgress } })
+        )
+      );
+      toast.success(`${selectedIds.size} action${selectedIds.size > 1 ? "s" : ""} marked In Progress`);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error("Some updates failed. Please retry.");
+    } finally {
+      setBulkLoading(false);
+    }
+  };
+
+  // ── Bulk: Export CSV ──────────────────────────────────────────────────────
+  const handleExportCSV = () => {
+    const selectedPAs = filtered.filter((pa) => selectedIds.has(pa.cr4c3_preventiveactionid!));
+    const header = ["Title", "Description", "Status", "Due Date", "Incident Reference"];
+    const STATUS_LABEL: Record<number, string> = {
+      [PA_STATUS.NotStarted]: "To Do",
+      [PA_STATUS.InProgress]: "In Progress",
+      [PA_STATUS.Completed]: "Completed",
+    };
+    const rows = selectedPAs.map((pa) => [
+      pa.cr4c3_title ?? "",
+      pa.cr4c3_description ?? "",
+      STATUS_LABEL[pa.cr4c3_status ?? PA_STATUS.NotStarted] ?? "",
+      pa.cr4c3_duedate ? new Date(pa.cr4c3_duedate).toLocaleDateString() : "",
+      getIncidentRef(pa._cr4c3_incident_value) ?? "",
+    ]);
+    const csvContent = [header, ...rows]
+      .map((r) => r.map((v) => `"${String(v).replace(/"/g, '""')}"`).join(","))
+      .join("\n");
+    const blob = new Blob([csvContent], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `preventive-actions-${new Date().toISOString().slice(0, 10)}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast.success(`Exported ${selectedPAs.length} action${selectedPAs.length > 1 ? "s" : ""} to CSV`);
   };
 
   return (
@@ -151,9 +201,34 @@ export function PreventiveActionsListPage() {
             </Select>
           </div>
           {selectedIds.size > 0 && (
-            <div className="mt-3 pt-3 border-t border-gray-100 flex items-center gap-3">
-              <span className="text-sm text-gray-600">{selectedIds.size} selected</span>
-              <Button variant="outline" size="sm" onClick={() => setSelectedIds(new Set())}>Deselect all</Button>
+            <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3 flex-wrap">
+              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+                {selectedIds.size} selected
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleBulkMarkInProgress}
+                disabled={bulkLoading}
+                className="gap-1.5 text-blue-700 border-blue-200 hover:bg-blue-50"
+                aria-label="Mark selected as In Progress"
+              >
+                <RefreshCw className="w-3.5 h-3.5" aria-hidden="true" />
+                Mark In Progress
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={handleExportCSV}
+                className="gap-1.5 text-green-700 border-green-200 hover:bg-green-50"
+                aria-label="Export selected to CSV"
+              >
+                <Download className="w-3.5 h-3.5" aria-hidden="true" />
+                Export CSV
+              </Button>
+              <Button variant="ghost" size="sm" onClick={() => setSelectedIds(new Set())} className="text-gray-500">
+                Deselect all
+              </Button>
             </div>
           )}
         </GlassCard>

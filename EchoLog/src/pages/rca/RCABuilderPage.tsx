@@ -9,6 +9,7 @@ import { z } from "zod";
 import { currentUserAtom } from "@/store/authAtoms";
 import { useIncident } from "@/hooks/useIncidents";
 import { useRCASubmissions, useCreateRCA, useUpdateRCA } from "@/hooks/useRCASubmissions";
+import { useAuditLogs } from "@/hooks/useAuditLogs";
 import {
   useFishboneCauses,
   useCreateFishboneCause,
@@ -74,6 +75,8 @@ export function RCABuilderPage() {
   const { data: rcaList } = useRCASubmissions(incidentId);
   const existingRCA = rcaList?.[0];
   const { data: causes } = useFishboneCauses(existingRCA?.cr4c3_rcasubmissionid);
+  // PRD §4.2: count prior rejections to compute resubmission number
+  const { data: rcaAuditLogs } = useAuditLogs(undefined, undefined);
 
   const createRCA = useCreateRCA();
   const updateRCA = useUpdateRCA();
@@ -136,9 +139,24 @@ export function RCABuilderPage() {
       alert("At least one cause is required before submitting.");
       return;
     }
+    // PRD §4.2: count rejection events for this RCA and suffix title
+    const rejectionCount = (rcaAuditLogs ?? []).filter(
+      (l) =>
+        l.cr4c3_entityid === existingRCA.cr4c3_rcasubmissionid &&
+        (l.cr4c3_description?.toLowerCase().includes("reject") ||
+          l.cr4c3_newvalue === String(RCA_STATUS.Rejected))
+    ).length;
+    const baseTitle = (existingRCA.cr4c3_rcatitle ?? "").replace(/ \(Resubmission \d+\)$/, "");
+    const finalTitle =
+      rejectionCount > 0
+        ? `${baseTitle} (Resubmission ${rejectionCount})`
+        : baseTitle;
     await updateRCA.mutateAsync({
       id: existingRCA.cr4c3_rcasubmissionid,
-      fields: { cr4c3_status: RCA_STATUS.Submitted },
+      fields: {
+        cr4c3_status: RCA_STATUS.Submitted,
+        cr4c3_rcatitle: finalTitle,
+      },
     });
     navigate(`/incidents/${incidentId}`);
   };

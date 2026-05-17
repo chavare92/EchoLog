@@ -1,15 +1,17 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect, useRef, useCallback } from "react";
 import { useAtomValue } from "jotai";
 import { motion } from "framer-motion";
-import { Search, Gavel, CheckCircle, XCircle, Target, AlertTriangle } from "lucide-react";
+import { Search, Gavel, CheckCircle, XCircle, Target, AlertTriangle, Zap } from "lucide-react";
 import { currentUserAtom } from "@/store/authAtoms";
 import { useRCASubmissions, useUpdateRCA } from "@/hooks/useRCASubmissions";
 import { useIncidents, useUpdateIncident } from "@/hooks/useIncidents";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
-import { useCreateAuditLog } from "@/hooks/useAuditLogs";
+import { useCreateAuditLog, useAuditLogs } from "@/hooks/useAuditLogs";
 import { useCreateNotification } from "@/hooks/useNotifications";
+import { useSLARules } from "@/hooks/useSLARules";
 import { RCA_STATUS, INCIDENT_STATUS } from "@/lib/constants";
-import { formatDateTime, calculateL1Window } from "@/lib/utils";
+import { formatDateTime } from "@/lib/utils";
+import { evaluateEscalation, escalationReasonLabel } from "@/lib/escalation";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
@@ -37,6 +39,8 @@ export function ReviewQueuePage() {
   const { data: allRCAs, isLoading } = useRCASubmissions();
   const { data: incidents } = useIncidents();
   const { data: userProfiles } = useUserProfiles();
+  const { data: allAuditLogs } = useAuditLogs();
+  const { data: slaRules } = useSLARules();
   const updateRCA = useUpdateRCA();
   const updateIncident = useUpdateIncident();
   const createAuditLog = useCreateAuditLog();
@@ -45,11 +49,65 @@ export function ReviewQueuePage() {
   const [activeTab, setActiveTab] = useState<TabType>("review");
   const [search, setSearch] = useState("");
   const [selectedRCA, setSelectedRCA] = useState<string | null>(null);
+  const [focusedCardId, setFocusedCardId] = useState<string | null>(null);
   const [action, setAction] = useState<"approve" | "reject">("approve");
   const [comment, setComment] = useState("");
 
   const getIncident = (id?: string) => incidents?.find((i) => i.cr4c3_incidentid === id);
   const getUserName = (id?: string) => userProfiles?.find((u) => u.cr4c3_userprofileid === id)?.cr4c3_fullname ?? "Unknown";
+
+  // ── Escalation daemon (PRD §4.2) — runs on mount + every 5 min ───────────
+  const processEscalation = useCallback(async () => {
+    if (!allRCAs || !incidents || !allAuditLogs) return;
+    for (const rca of allRCAs) {
+      const inc = incidents.find((i) => i.cr4c3_incidentid === rca._cr4c3_incident_value);
+      const logsForRCA = allAuditLogs.filter((l) => l.cr4c3_entityid === rca.cr4c3_rcasubmissionid);
+      const { shouldEscalate, reason } = evaluateEscalation(rca, inc, logsForRCA, slaRules);
+      if (!shouldEscalate) continue;
+      // Already escalated? Skip to avoid duplicate writes
+      if (rca.cr4c3_status === RCA_STATUS.Escalated) continue;
+      try {
+        await updateRCA.mutateAsync({ id: rca.cr4c3_rcasubmissionid!, fields: { cr4c3_status: RCA_STATUS.Escalated } });
+        createAuditLog.mutate({
+          cr4c3_entityid: rca.cr4c3_rcasubmissionid,
+          cr4c3_entitytype: "RCASubmission",
+          cr4c3_description: `RCA auto-escalated: ${escalationReasonLabel(reason)}`,
+          cr4c3_timestamp: new Date().toISOString(),
+          _cr4c3_actor_value: user?.cr4c3_userprofileid,
+          cr4c3_action: 6,
+        } as Record<string, unknown>);
+        // Notify L2Managers
+        const l2Managers = userProfiles?.filter((u) => u.cr4c3_role === 564060003) ?? [];
+        for (const _l2 of l2Managers) {
+          createNotification.mutate({
+            cr4c3_message: `RCA "${rca.cr4c3_rcatitle}" has been escalated (${escalationReasonLabel(reason)})`,
+            cr4c3_isread: false,
+            cr4c3_createdat: new Date().toISOString(),
+            _cr4c3_incident_value: rca._cr4c3_incident_value,
+          } as Record<string, unknown>);
+        }
+      } catch { /* fire-and-forget */ }
+    }
+  }, [allRCAs, incidents, allAuditLogs, slaRules, userProfiles, user?.cr4c3_userprofileid, updateRCA, createAuditLog, createNotification]);
+
+  const escalationIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+  useEffect(() => {
+    processEscalation();
+    escalationIntervalRef.current = setInterval(processEscalation, 5 * 60 * 1000);
+    return () => { if (escalationIntervalRef.current) clearInterval(escalationIntervalRef.current); };
+  }, [processEscalation]);
+
+  // ── Keyboard shortcuts: A = Approve, R = Reject on focused card ──────────
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => {
+      if (!focusedCardId) return;
+      if ((e.target as HTMLElement).tagName === "INPUT" || (e.target as HTMLElement).tagName === "TEXTAREA") return;
+      if (e.key === "a" || e.key === "A") { openReviewDialog(focusedCardId, "approve"); }
+      if (e.key === "r" || e.key === "R") { openReviewDialog(focusedCardId, "reject"); }
+    };
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, [focusedCardId]);
 
   const pendingRCAs = useMemo(() =>
     (allRCAs ?? []).filter((r) =>
@@ -63,15 +121,17 @@ export function ReviewQueuePage() {
     pendingRCAs.filter((r) => {
       const inc = getIncident(r._cr4c3_incident_value ?? "");
       return inc?.cr4c3_severity === 564060000;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
     }), [pendingRCAs, incidents]);
 
   const escalatedRCAs = useMemo(() =>
     pendingRCAs.filter((r) => {
       const inc = getIncident(r._cr4c3_incident_value ?? "");
       if (!inc) return false;
-      const l1Window = calculateL1Window(new Date(inc.cr4c3_createdat ?? Date.now()), inc.cr4c3_severity ?? 564060002);
-      return l1Window < new Date() || (inc.cr4c3_rejectioncount ?? 0) >= 2;
-    }), [pendingRCAs, incidents]);
+      const logsForRCA = (allAuditLogs ?? []).filter((l) => l.cr4c3_entityid === r.cr4c3_rcasubmissionid);
+      return evaluateEscalation(r, inc, logsForRCA, slaRules).shouldEscalate;
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+    }), [pendingRCAs, incidents, allAuditLogs, slaRules]);
 
   const applySearch = (list: typeof pendingRCAs) =>
     list.filter((r) => {
@@ -166,15 +226,20 @@ export function ReviewQueuePage() {
             <p className="text-xs text-gray-500 dark:text-gray-400">{pendingRCAs.length} RCA{pendingRCAs.length !== 1 ? "s" : ""} pending review</p>
           </div>
         </div>
-        <div className="relative max-w-xs w-full">
-          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
-          <Input
-            placeholder="Search RCAs…"
-            className="pl-9"
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            aria-label="Search RCAs"
-          />
+        <div className="flex items-center gap-3">
+          <p className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
+            Focus card → <kbd className="font-semibold">A</kbd> approve · <kbd className="font-semibold">R</kbd> reject
+          </p>
+          <div className="relative max-w-xs w-full">
+            <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+            <Input
+              placeholder="Search RCAs…"
+              className="pl-9"
+              value={search}
+              onChange={(e) => setSearch(e.target.value)}
+              aria-label="Search RCAs"
+            />
+          </div>
         </div>
       </motion.div>
 
@@ -230,7 +295,14 @@ export function ReviewQueuePage() {
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: idx * 0.04 }}
               >
-                <GlassCard className={`p-5 border-l-4 ${borderColor} h-full flex flex-col gap-3`}>
+                <GlassCard
+                  key={rca.cr4c3_rcasubmissionid}
+                  tabIndex={0}
+                  onFocus={() => setFocusedCardId(rca.cr4c3_rcasubmissionid ?? null)}
+                  onBlur={() => setFocusedCardId(null)}
+                  className={`p-5 border-l-4 ${borderColor} h-full flex flex-col gap-3 cursor-pointer outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${focusedCardId === rca.cr4c3_rcasubmissionid ? "ring-2 ring-primary/30" : ""}`}
+                  aria-label={`RCA: ${rca.cr4c3_rcatitle}. Press A to approve, R to reject.`}
+                >
                   <div className="flex items-start justify-between gap-2">
                     <div className="flex items-center gap-2">
                       <Target className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
@@ -247,6 +319,18 @@ export function ReviewQueuePage() {
                     <span>{formatDateTime(rca.cr4c3_submittedat)}</span>
                   </div>
                   <StatusBadge status={rca.cr4c3_status} type="rca" />
+                  {(() => {
+                    const inc = getIncident(rca._cr4c3_incident_value ?? "");
+                    const logsForRCA = (allAuditLogs ?? []).filter((l) => l.cr4c3_entityid === rca.cr4c3_rcasubmissionid);
+                    const { shouldEscalate, reason } = evaluateEscalation(rca, inc, logsForRCA, slaRules);
+                    if (!shouldEscalate) return null;
+                    return (
+                      <div className="flex items-center gap-1.5 rounded-md bg-red-50 dark:bg-red-950/40 border border-red-200 dark:border-red-800 px-2 py-1">
+                        <Zap className="w-3 h-3 text-red-600 flex-shrink-0" aria-hidden="true" />
+                        <span className="text-xs text-red-700 dark:text-red-400 font-medium">{escalationReasonLabel(reason)}</span>
+                      </div>
+                    );
+                  })()}
                   <div className="flex gap-2 mt-auto">
                     <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 focus:ring-green-500" onClick={() => openReviewDialog(rca.cr4c3_rcasubmissionid!, "approve")}>
                       <CheckCircle className="w-4 h-4 mr-1" aria-hidden="true" />
