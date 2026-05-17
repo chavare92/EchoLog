@@ -10,7 +10,7 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { useAuth } from "@/auth/AuthProvider";
 import { Cr4c3_userprofilesService } from "@/generated/services/Cr4c3_userprofilesService";
-import { sha256 } from "@/lib/utils";
+import { unwrapResult } from "@/lib/utils";
 import { AlertCircle, Lock, Mail, Zap, FlaskConical, Timer } from "lucide-react";
 import { USER_ROLE } from "@/lib/constants";
 
@@ -148,59 +148,31 @@ export function LoginPage() {
     try {
       const result = await Cr4c3_userprofilesService.getAll({
         filter: `cr4c3_email eq '${values.email}'`,
-        select: ["cr4c3_userprofileid", "cr4c3_fullname", "cr4c3_email", "cr4c3_role", "_cr4c3_department_value", "_cr4c3_team_value", "_cr4c3_manager_value", "_cr4c3_l2manager_value", "cr4c3_password", "cr4c3_failedloginattempts", "cr4c3_islocked", "cr4c3_isactive"],
+        select: ["cr4c3_userprofileid", "cr4c3_fullname", "cr4c3_email", "cr4c3_role", "_cr4c3_department_value", "_cr4c3_subdepartment_value", "_cr4c3_process_value", "_cr4c3_team_value", "_cr4c3_manager_value", "_cr4c3_l2manager_value", "cr4c3_password"],
       });
 
-      const users = result.data ?? [];
+      const users = unwrapResult(result) ?? [];
       if (users.length === 0) {
         setError("No account found with that email address.");
         return;
       }
 
       const user = users[0];
-      const userRecord = user as Record<string, unknown>;
 
-      // ── Check active status ──────────────────────────────────────────────
-      if (userRecord["cr4c3_isactive"] === false) {
-        setError("Your account is inactive. Contact your administrator.");
-        return;
-      }
-
-      // ── Check server-side lock flag ────────────────────────────────────────
-      if (userRecord["cr4c3_islocked"] === true) {
-        setError("Your account has been locked by an administrator. Contact IT support.");
-        return;
-      }
-
-      const passwordField = userRecord["cr4c3_password"] as string | undefined;
+      const passwordField = user.cr4c3_password;
       if (!passwordField) {
         setError("This account has no password set. Contact your administrator.");
         return;
       }
 
-      // Normalise stored hash — strip " -", lowercase, trim
-      const storedHash = passwordField.trim().split(/\s/)[0].toLowerCase();
-      const hashedInput = await sha256(values.password);
+      const storedValue = passwordField.trim();
+      const passwordMatch = values.password === storedValue;
 
-      // DEBUG: Log comparison for troubleshooting mismatches
-      console.log("[EchoLog Auth Debug]", {
-        providedEmail: values.email,
-        inputHash: hashedInput,
-        storedHash: storedHash,
-        match: hashedInput === storedHash
-      });
-
-      if (hashedInput !== storedHash) {
+      if (!passwordMatch) {
         const newCount = failedAttempts + 1;
         setFailedAttempts(newCount);
 
-        // Increment server-side counter (fire-and-forget)
-        if (user.cr4c3_userprofileid) {
-          const currentServerCount = ((userRecord["cr4c3_failedloginattempts"] as number) ?? 0) + 1;
-          Cr4c3_userprofilesService.update(user.cr4c3_userprofileid, {
-            cr4c3_failedloginattempts: currentServerCount,
-          } as Record<string, unknown>).catch(console.error);
-        }
+        // no-op: failedloginattempts not tracked server-side in this schema
 
         if (newCount >= MAX_ATTEMPTS) {
           setLockout(values.email);
@@ -217,16 +189,10 @@ export function LoginPage() {
       // ── Successful login: reset counters ──────────────────────────────────
       clearLockout();
       setFailedAttempts(0);
-      if (user.cr4c3_userprofileid && (userRecord["cr4c3_failedloginattempts"] as number) > 0) {
-        Cr4c3_userprofilesService.update(user.cr4c3_userprofileid, {
-          cr4c3_failedloginattempts: 0,
-        } as Record<string, unknown>).catch(console.error);
-      }
 
       // Strip password before storing in session (never persist credentials)
       const safeUser = { ...user };
       delete (safeUser as Record<string, unknown>)["cr4c3_password"];
-      delete (safeUser as Record<string, unknown>)["cr4c3_failedloginattempts"];
 
       login(safeUser);
       navigate(from, { replace: true });

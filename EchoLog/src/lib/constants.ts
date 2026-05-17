@@ -55,9 +55,9 @@ export const FISHBONE_CATEGORY = {
   People: 564060000,
   Process: 564060001,
   Technology: 564060002,
-  Data: 564060003,
+  Material: 564060003,
   Environment: 564060004,
-  Governance: 564060005,
+  Management: 564060005,
 } as const;
 
 export type FishboneCategoryKey = keyof typeof FISHBONE_CATEGORY;

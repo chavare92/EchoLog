@@ -1,4 +1,4 @@
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import { useAtomValue } from "jotai";
 import { motion } from "framer-motion";
@@ -10,7 +10,6 @@ import {
   FileText,
   ShieldCheck,
   GitBranch,
-  UserCheck,
   AlertTriangle,
   CheckCircle,
   PlusCircle,
@@ -20,12 +19,22 @@ import {
   XCircle,
   PlayCircle,
   Search,
+  Plus,
+  Trash2,
+  ExternalLink,
+  History,
+  Eye,
 } from "lucide-react";
 import { currentUserAtom } from "@/store/authAtoms";
 import { useIncident, useUpdateIncident } from "@/hooks/useIncidents";
-import { useRCASubmissions, useCreateRCA } from "@/hooks/useRCASubmissions";
+import { useRCASubmissions, useCreateRCA, useUpdateRCA } from "@/hooks/useRCASubmissions";
 import { usePreventiveActions, useCreatePA } from "@/hooks/usePreventiveActions";
 import { useAuditLogs, useCreateAuditLog } from "@/hooks/useAuditLogs";
+import {
+  useFishboneCauses,
+  useCreateFishboneCause,
+  useDeleteFishboneCause,
+} from "@/hooks/useFishboneCauses";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useSubdepartments } from "@/hooks/useSubdepartments";
 import { useProcesses } from "@/hooks/useProcesses";
@@ -33,7 +42,7 @@ import { useTeams } from "@/hooks/useTeams";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { useCreateNotification } from "@/hooks/useNotifications";
 import { useRoleGuard } from "@/auth/useRoleGuard";
-import { INCIDENT_STATUS, RCA_STATUS, PA_STATUS, SEVERITY, NOTIFICATION_TYPE } from "@/lib/constants";
+import { INCIDENT_STATUS, RCA_STATUS, PA_STATUS, SEVERITY, NOTIFICATION_TYPE, FISHBONE_CATEGORY } from "@/lib/constants";
 import { formatDateTime, formatDate, isOverdue, getRemainingTATMs, formatDuration } from "@/lib/utils";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -80,9 +89,12 @@ export function IncidentDetailPage() {
 
   const updateIncident = useUpdateIncident();
   const createRCA = useCreateRCA();
+  const updateRCA = useUpdateRCA();
   const createPA = useCreatePA();
   const createAuditLog = useCreateAuditLog();
   const createNotification = useCreateNotification();
+  const createFishboneCause = useCreateFishboneCause();
+  const deleteFishboneCause = useDeleteFishboneCause();
 
   // ── Context-aware role resolution (PRD §2.3) ─────────────────────────────
   const guard = useRoleGuard(useMemo(() => ({ incident }), [incident]));
@@ -91,15 +103,28 @@ export function IncidentDetailPage() {
   const [editTitle, setEditTitle] = useState("");
   const [editDesc, setEditDesc] = useState("");
   const [editSeverity, setEditSeverity] = useState("");
-  const [rcaDialogOpen, setRcaDialogOpen] = useState(false);
   const [paDialogOpen, setPaDialogOpen] = useState(false);
   const [rcaTitle, setRcaTitle] = useState("");
   const [rcaEffect, setRcaEffect] = useState("");
+  const [showFishboneDiagram, setShowFishboneDiagram] = useState(false);
+  const [addingCauseCategory, setAddingCauseCategory] = useState<number | null>(null);
+  const [newCauseText, setNewCauseText] = useState("");
   const [paTitle, setPaTitle] = useState("");
   const [paDesc, setPaDesc] = useState("");
   const [paDueDate, setPaDueDate] = useState("");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+
+  // Sync RCA form fields when existing RCA loads
+  useEffect(() => {
+    if (rcaList?.[0]) {
+      setRcaTitle(rcaList[0].cr4c3_rcatitle ?? "");
+      setRcaEffect(rcaList[0].cr4c3_effectstatement ?? "");
+    }
+  }, [rcaList]);
+
+  const existingRCA = rcaList?.[0];
+  const { data: rcaCauses } = useFishboneCauses(existingRCA?.cr4c3_rcasubmissionid);
 
   if (isLoading) return <div className="p-6"><SkeletonCard /></div>;
   if (!incident) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Incident not found.</div>;
@@ -200,37 +225,63 @@ export function IncidentDetailPage() {
     toast.success("Investigation started");
   };
 
-  const handleAssignToMe = async () => {
-    if (!userId) { toast.error("No user session"); return; }
-    await updateIncident.mutateAsync({
-      id: id!,
-      fields: {
-        _cr4c3_assignee_value: userId,
-        cr4c3_status: INCIDENT_STATUS.InvestigationPending,
-        cr4c3_updatedat: new Date().toISOString(),
-      },
-    });
-    writeAuditLog("Assigned", `Assigned to ${user?.cr4c3_fullname ?? "user"}`);
-    toast.success("Assigned to you");
+  const handleSaveDraft = async () => {
+    if (!rcaTitle.trim()) { toast.error("Title is required"); return; }
+    if (existingRCA) {
+      await updateRCA.mutateAsync({
+        id: existingRCA.cr4c3_rcasubmissionid!,
+        fields: {
+          cr4c3_rcatitle: rcaTitle.trim(),
+          cr4c3_effectstatement: rcaEffect.trim(),
+          cr4c3_status: RCA_STATUS.Draft,
+        },
+      });
+      toast.success("RCA draft saved");
+    } else {
+      await createRCA.mutateAsync({
+        cr4c3_rcatitle: rcaTitle.trim(),
+        cr4c3_effectstatement: rcaEffect.trim(),
+        cr4c3_status: RCA_STATUS.Draft,
+        cr4c3_submittedat: new Date().toISOString(),
+        _cr4c3_incident_value: id,
+        _cr4c3_submittedby_value: userId,
+      });
+      writeAuditLog("Created", "RCA draft created");
+      toast.success("RCA draft saved");
+    }
   };
 
-  const handleSubmitRCA = async () => {
-    if (!rcaTitle.trim() || !rcaEffect.trim()) { toast.error("Title and effect statement are required"); return; }
-    await createRCA.mutateAsync({
-      cr4c3_rcatitle: rcaTitle,
-      cr4c3_effectstatement: rcaEffect,
-      cr4c3_status: RCA_STATUS.Submitted,
-      cr4c3_submittedat: new Date().toISOString(),
-      _cr4c3_incident_value: id,
-      _cr4c3_submittedby_value: userId,
+  const handleSubmitForReview = async () => {
+    if (!rcaTitle.trim() || rcaEffect.trim().length < 20) {
+      toast.error("Title and effect statement (min 20 chars) are required");
+      return;
+    }
+    if (!existingRCA) { toast.error("Save a draft first"); return; }
+    await updateRCA.mutateAsync({
+      id: existingRCA.cr4c3_rcasubmissionid!,
+      fields: {
+        cr4c3_rcatitle: rcaTitle.trim(),
+        cr4c3_effectstatement: rcaEffect.trim(),
+        cr4c3_status: RCA_STATUS.Submitted,
+        cr4c3_submittedat: new Date().toISOString(),
+        _cr4c3_submittedby_value: userId,
+      },
     });
     await updateIncident.mutateAsync({ id: id!, fields: { cr4c3_status: INCIDENT_STATUS.RCASubmitted, cr4c3_updatedat: new Date().toISOString() } });
-    writeAuditLog("StatusChanged", "RCA submitted", "InvestigationPending", "RCASubmitted");
+    writeAuditLog("StatusChanged", "RCA submitted for review", "Draft", "Submitted");
     notifyUser(incident._cr4c3_loggedby_value, `RCA submitted for ${incident.cr4c3_ticketreference}`);
-    setRcaDialogOpen(false);
-    setRcaTitle("");
-    setRcaEffect("");
-    toast.success("RCA submitted");
+    toast.success("RCA submitted for review");
+  };
+
+  const handleAddCause = async (category: number) => {
+    if (!newCauseText.trim() || !existingRCA?.cr4c3_rcasubmissionid) return;
+    await createFishboneCause.mutateAsync({
+      cr4c3_causetext: newCauseText.trim(),
+      cr4c3_category: category,
+      _cr4c3_rcasubmission_value: existingRCA.cr4c3_rcasubmissionid,
+    } as Record<string, unknown>);
+    setNewCauseText("");
+    setAddingCauseCategory(null);
   };
 
   const handleCreatePA = async () => {
@@ -330,12 +381,6 @@ export function IncidentDetailPage() {
                   <Button variant="outline" size="sm" onClick={openEditDialog}>
                     <Pencil className="w-4 h-4 mr-1.5" aria-hidden="true" />
                     Edit
-                  </Button>
-                )}
-                {!incident._cr4c3_assignee_value && (guard.isAssignee || guard.isAdmin) && (
-                  <Button variant="outline" size="sm" onClick={handleAssignToMe}>
-                    <UserCheck className="w-4 h-4 mr-1.5" aria-hidden="true" />
-                    Assign to me
                   </Button>
                 )}
                 {canStartInvestigation && (
@@ -483,12 +528,12 @@ export function IncidentDetailPage() {
                       { label: "Subdepartment", value: getSubdeptName(incident._cr4c3_subdepartment_value) },
                       { label: "Process", value: getProcessName(incident._cr4c3_process_value) },
                       { label: "Team", value: getTeamName(incident._cr4c3_team_value) },
-                    ].map(({ label, value }) => value ? (
+                    ].map(({ label, value }) => (
                       <div key={label} className="flex justify-between gap-2">
                         <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium text-right">{value}</dd>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium text-right">{value ?? "—"}</dd>
                       </div>
-                    ) : null)}
+                    ))}
                   </dl>
                 </GlassCard>
 
@@ -500,12 +545,12 @@ export function IncidentDetailPage() {
                   </h3>
                   <dl className="space-y-2 text-sm">
                     {[
-                      { label: "Logged by", value: getUserName(incident._cr4c3_loggedby_value) },
-                      { label: "Assignee", value: getUserName(incident._cr4c3_assignee_value) ?? "Unassigned" },
+                      { label: "Logged by", value: !userProfiles ? "Loading…" : (getUserName(incident._cr4c3_loggedby_value) ?? "—") },
+                      { label: "Assignee", value: !userProfiles ? "Loading…" : (incident._cr4c3_assignee_value ? (getUserName(incident._cr4c3_assignee_value) ?? "—") : "Unassigned") },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex justify-between gap-2">
                         <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
-                        <dd className={`font-medium text-right ${value === "Unassigned" ? "text-gray-400 dark:text-gray-500 italic" : "text-gray-900 dark:text-gray-100"}`}>{value}</dd>
+                        <dd className={`font-medium text-right ${value === "Unassigned" ? "text-gray-400 dark:text-gray-500 italic" : value === "Loading…" ? "text-gray-400 dark:text-gray-500 animate-pulse" : "text-gray-900 dark:text-gray-100"}`}>{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -557,51 +602,314 @@ export function IncidentDetailPage() {
 
           {/* RCA Tab */}
           <TabsContent value="rca" className="space-y-4">
-            <div className="flex items-center justify-between">
+            {/* Header row */}
+            <div className="flex items-center justify-between flex-wrap gap-2">
               <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Root Cause Analysis</h3>
               <div className="flex gap-2">
+                {existingRCA && (
+                  <Button variant="outline" size="sm" onClick={() => navigate(`/incidents/${id}/rca`)}>
+                    <ExternalLink className="w-4 h-4 mr-1.5" aria-hidden="true" />
+                    Full Editor
+                  </Button>
+                )}
                 {rcaList?.some((r) => r.cr4c3_status === RCA_STATUS.Approved) && (
                   <Button variant="outline" size="sm" onClick={() => window.print()}>
                     <Download className="w-4 h-4 mr-1.5" aria-hidden="true" />
                     Export
                   </Button>
                 )}
-                {canSubmitRCA && (
-                  <Button size="sm" onClick={() => setRcaDialogOpen(true)}>
-                    <PlusCircle className="w-4 h-4 mr-1.5" aria-hidden="true" />
-                    Submit RCA
-                  </Button>
-                )}
               </div>
             </div>
-            {!rcaList || rcaList.length === 0 ? (
+
+            {/* Empty state — no RCA yet and user cannot submit */}
+            {(!rcaList || rcaList.length === 0) && !canSubmitRCA && (
               <GlassCard className="py-12 text-center">
                 <GitBranch className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
                 <p className="text-gray-500 dark:text-gray-400 font-medium">No RCA submitted yet</p>
-                {canSubmitRCA && (
-                  <Button size="sm" className="mt-4" onClick={() => setRcaDialogOpen(true)}>Submit RCA</Button>
-                )}
               </GlassCard>
-            ) : (
-              <div className="space-y-4">
-                {rcaList.map((rca) => (
-                  <GlassCard key={rca.cr4c3_rcasubmissionid} className="p-5">
-                    <div className="flex items-start justify-between gap-3 mb-3">
-                      <div>
-                        <p className="font-semibold text-gray-900 dark:text-gray-100">{rca.cr4c3_rcatitle}</p>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Submitted {formatDateTime(rca.cr4c3_submittedat)}</p>
-                      </div>
-                      <StatusBadge status={rca.cr4c3_status} type="rca" />
+            )}
+
+            {/* RCA Header Form — editable when draft/rejected or creating new */}
+            {canSubmitRCA && (
+              <GlassCard className="p-5">
+                <div className="flex items-center justify-between mb-4">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    {existingRCA ? "Edit RCA" : "New RCA"}
+                    {existingRCA && <StatusBadge status={existingRCA.cr4c3_status} type="rca" className="ml-2 align-middle" />}
+                  </h3>
+                </div>
+                {(!existingRCA || existingRCA.cr4c3_status === RCA_STATUS.Draft || existingRCA.cr4c3_status === RCA_STATUS.Rejected) ? (
+                  <div className="space-y-4">
+                    <div className="space-y-1.5">
+                      <Label htmlFor="rca-title-inline">Title <span className="text-red-500" aria-hidden="true">*</span></Label>
+                      <Input
+                        id="rca-title-inline"
+                        value={rcaTitle}
+                        onChange={(e) => setRcaTitle(e.target.value)}
+                        placeholder="Root cause analysis title…"
+                      />
                     </div>
-                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{rca.cr4c3_effectstatement}</p>
-                    {rca.cr4c3_reviewcomments && (
-                      <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
-                        <span className="font-semibold">Review Comments: </span>{rca.cr4c3_reviewcomments}
+                    <div className="space-y-1.5">
+                      <Label htmlFor="rca-effect-inline">Effect Statement <span className="text-red-500" aria-hidden="true">*</span></Label>
+                      <Textarea
+                        id="rca-effect-inline"
+                        value={rcaEffect}
+                        onChange={(e) => setRcaEffect(e.target.value)}
+                        rows={3}
+                        placeholder="Describe the problem/effect (min 20 characters)…"
+                      />
+                      <p className="text-xs text-gray-400 dark:text-gray-500">{rcaEffect.length} / 2000 characters</p>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        onClick={handleSaveDraft}
+                        disabled={!rcaTitle.trim() || createRCA.isPending || updateRCA.isPending}
+                      >
+                        {(createRCA.isPending || updateRCA.isPending) ? "Saving…" : "Save Draft"}
+                      </Button>
+                      {existingRCA && (rcaCauses?.length ?? 0) > 0 && (
+                        <Button
+                          size="sm"
+                          onClick={handleSubmitForReview}
+                          disabled={!rcaTitle.trim() || rcaEffect.length < 20 || updateRCA.isPending}
+                        >
+                          Submit for Review
+                        </Button>
+                      )}
+                    </div>
+                    {existingRCA && (rcaCauses?.length ?? 0) === 0 && (
+                      <p className="text-xs text-amber-600 dark:text-amber-400 flex items-center gap-1.5">
+                        <AlertTriangle className="w-3.5 h-3.5 flex-shrink-0" aria-hidden="true" />
+                        Add at least one cause below before submitting
+                      </p>
+                    )}
+                  </div>
+                ) : (
+                  // Read-only view for submitted / approved / under review RCA
+                  <div className="space-y-3">
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Title</p>
+                      <p className="font-semibold text-gray-900 dark:text-gray-100">{existingRCA.cr4c3_rcatitle}</p>
+                    </div>
+                    <div>
+                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Effect Statement</p>
+                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{existingRCA.cr4c3_effectstatement}</p>
+                    </div>
+                    {existingRCA.cr4c3_reviewcomments && (
+                      <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
+                        <span className="font-semibold">Review Comments: </span>{existingRCA.cr4c3_reviewcomments}
                       </div>
                     )}
-                  </GlassCard>
-                ))}
-              </div>
+                  </div>
+                )}
+              </GlassCard>
+            )}
+
+            {/* Read-only RCA summary for viewers */}
+            {!canSubmitRCA && existingRCA && (
+              <GlassCard className="p-5">
+                <div className="flex items-start justify-between gap-3 mb-3">
+                  <div>
+                    <p className="font-semibold text-gray-900 dark:text-gray-100">{existingRCA.cr4c3_rcatitle}</p>
+                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Submitted {formatDateTime(existingRCA.cr4c3_submittedat)}</p>
+                  </div>
+                  <StatusBadge status={existingRCA.cr4c3_status} type="rca" />
+                </div>
+                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{existingRCA.cr4c3_effectstatement}</p>
+                {existingRCA.cr4c3_reviewcomments && (
+                  <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
+                    <span className="font-semibold">Review Comments: </span>{existingRCA.cr4c3_reviewcomments}
+                  </div>
+                )}
+              </GlassCard>
+            )}
+
+            {/* Fishbone Cause Manager — shown when an RCA exists */}
+            {existingRCA && (
+              <GlassCard className="p-5">
+                <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
+                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                    Fishbone Analysis
+                    <span className="ml-2 text-xs font-normal text-gray-400">({rcaCauses?.length ?? 0} cause{(rcaCauses?.length ?? 0) !== 1 ? "s" : ""})</span>
+                  </h3>
+                  <Button variant="outline" size="sm" onClick={() => setShowFishboneDiagram((v) => !v)}>
+                    {showFishboneDiagram
+                      ? <><Pencil className="w-4 h-4 mr-1.5" aria-hidden="true" />Edit Mode</>
+                      : <><Eye className="w-4 h-4 mr-1.5" aria-hidden="true" />View Diagram</>}
+                  </Button>
+                </div>
+
+                {showFishboneDiagram ? (
+                  // SVG Fishbone Diagram
+                  <div className="overflow-x-auto rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-2">
+                    <svg viewBox="0 0 900 500" className="w-full min-w-[600px]" aria-label="Fishbone diagram" role="img">
+                      {/* Spine */}
+                      <line x1="100" y1="250" x2="790" y2="250" stroke="#d97706" strokeWidth="3" />
+                      {/* Effect head */}
+                      <rect x="790" y="208" width="98" height="84" rx="8" fill="#fef3c7" stroke="#fcd34d" strokeWidth="1.5" />
+                      <text x="839" y="246" textAnchor="middle" fill="#92400e" fontSize="11" fontWeight="700">Effect</text>
+                      <text x="839" y="261" textAnchor="middle" fill="#78716c" fontSize="9">
+                        {(existingRCA.cr4c3_effectstatement ?? "").slice(0, 16)}{(existingRCA.cr4c3_effectstatement?.length ?? 0) > 16 ? "…" : ""}
+                      </text>
+                      {/* 6 bones: 3 top (People/Process/Technology), 3 bottom (Material/Environment/Management) */}
+                      {[
+                        { cat: FISHBONE_CATEGORY.People,      label: "People",      x: 200, side: "top",    color: "#9333ea" },
+                        { cat: FISHBONE_CATEGORY.Process,     label: "Process",     x: 400, side: "top",    color: "#2563eb" },
+                        { cat: FISHBONE_CATEGORY.Technology,  label: "Technology",  x: 600, side: "top",    color: "#0891b2" },
+                        { cat: FISHBONE_CATEGORY.Material,    label: "Material",    x: 200, side: "bottom", color: "#d97706" },
+                        { cat: FISHBONE_CATEGORY.Environment, label: "Environment", x: 400, side: "bottom", color: "#16a34a" },
+                        { cat: FISHBONE_CATEGORY.Management,  label: "Management",  x: 600, side: "bottom", color: "#dc2626" },
+                      ].map(({ cat, label, x, side, color }) => {
+                        const dy = side === "top" ? -90 : 90;
+                        const ty = side === "top" ? 148 : 356;
+                        const boneCauses = (rcaCauses ?? []).filter((c) => c.cr4c3_category === cat);
+                        return (
+                          <g key={cat}>
+                            <line x1={x} y1="250" x2={x + 35} y2={250 + dy} stroke={color} strokeWidth="2" opacity="0.8" />
+                            <text x={x + 40} y={ty} fill="#1f2937" fontSize="11" fontWeight="700">{label}</text>
+                            {boneCauses.slice(0, 4).map((c, ci) => (
+                              <text key={c.cr4c3_fishbonecauseid} x={x + 40} y={ty + 14 + ci * 13} fill="#6b7280" fontSize="9">
+                                › {(c.cr4c3_causetext ?? "").slice(0, 25)}{(c.cr4c3_causetext?.length ?? 0) > 25 ? "…" : ""}
+                              </text>
+                            ))}
+                            {boneCauses.length > 4 && (
+                              <text x={x + 40} y={ty + 14 + 52} fill="#9ca3af" fontSize="8">+{boneCauses.length - 4} more</text>
+                            )}
+                          </g>
+                        );
+                      })}
+                    </svg>
+                  </div>
+                ) : (
+                  // Category grid — add / delete causes per category
+                  <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                    {[
+                      { cat: FISHBONE_CATEGORY.People,      label: "People",      color: "bg-purple-50 border-purple-200 text-purple-700 dark:bg-purple-950/20 dark:border-purple-800 dark:text-purple-400" },
+                      { cat: FISHBONE_CATEGORY.Process,     label: "Process",     color: "bg-blue-50 border-blue-200 text-blue-700 dark:bg-blue-950/20 dark:border-blue-800 dark:text-blue-400" },
+                      { cat: FISHBONE_CATEGORY.Technology,  label: "Technology",  color: "bg-cyan-50 border-cyan-200 text-cyan-700 dark:bg-cyan-950/20 dark:border-cyan-800 dark:text-cyan-400" },
+                      { cat: FISHBONE_CATEGORY.Material,    label: "Material",    color: "bg-amber-50 border-amber-200 text-amber-700 dark:bg-amber-950/20 dark:border-amber-800 dark:text-amber-400" },
+                      { cat: FISHBONE_CATEGORY.Environment, label: "Environment", color: "bg-green-50 border-green-200 text-green-700 dark:bg-green-950/20 dark:border-green-800 dark:text-green-400" },
+                      { cat: FISHBONE_CATEGORY.Management,  label: "Management",  color: "bg-red-50 border-red-200 text-red-700 dark:bg-red-950/20 dark:border-red-800 dark:text-red-400" },
+                    ].map(({ cat, label, color }) => {
+                      const categoryCauses = (rcaCauses ?? []).filter((c) => c.cr4c3_category === cat);
+                      const canEdit = canSubmitRCA && (existingRCA.cr4c3_status === RCA_STATUS.Draft || existingRCA.cr4c3_status === RCA_STATUS.Rejected);
+                      const isAddingThis = addingCauseCategory === cat;
+                      return (
+                        <div key={cat} className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/20 p-3">
+                          <div className="flex items-center justify-between mb-2">
+                            <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold ${color}`}>
+                              {label}
+                              <span className="rounded-full bg-white/60 dark:bg-gray-900/40 px-1.5 text-xs">{categoryCauses.length}</span>
+                            </span>
+                            {canEdit && !isAddingThis && (
+                              <Button
+                                variant="ghost"
+                                size="icon"
+                                className="h-6 w-6"
+                                aria-label={`Add ${label} cause`}
+                                onClick={() => { setAddingCauseCategory(cat); setNewCauseText(""); }}
+                              >
+                                <Plus className="w-3.5 h-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                          {isAddingThis && (
+                            <div className="flex gap-1.5 mb-2">
+                              <Input
+                                autoFocus
+                                className="h-7 text-xs"
+                                value={newCauseText}
+                                onChange={(e) => setNewCauseText(e.target.value)}
+                                placeholder={`${label} cause…`}
+                                onKeyDown={(e) => {
+                                  if (e.key === "Enter" && newCauseText.trim()) handleAddCause(cat);
+                                  if (e.key === "Escape") { setAddingCauseCategory(null); setNewCauseText(""); }
+                                }}
+                              />
+                              <Button
+                                size="sm"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => handleAddCause(cat)}
+                                disabled={!newCauseText.trim() || createFishboneCause.isPending}
+                              >
+                                Add
+                              </Button>
+                              <Button
+                                size="sm"
+                                variant="ghost"
+                                className="h-7 px-2 text-xs"
+                                onClick={() => { setAddingCauseCategory(null); setNewCauseText(""); }}
+                              >
+                                ✕
+                              </Button>
+                            </div>
+                          )}
+                          <div className="space-y-1 min-h-[24px]">
+                            {categoryCauses.map((c) => (
+                              <div key={c.cr4c3_fishbonecauseid} className="flex items-start gap-1.5 group">
+                                <span className="text-gray-400 dark:text-gray-500 text-xs mt-0.5 leading-none flex-shrink-0" aria-hidden="true">›</span>
+                                <span className="flex-1 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{c.cr4c3_causetext}</span>
+                                {canEdit && (
+                                  <button
+                                    className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity flex-shrink-0"
+                                    aria-label="Delete cause"
+                                    onClick={() => deleteFishboneCause.mutate(c.cr4c3_fishbonecauseid!)}
+                                  >
+                                    <Trash2 className="w-3 h-3" />
+                                  </button>
+                                )}
+                              </div>
+                            ))}
+                            {categoryCauses.length === 0 && !isAddingThis && (
+                              <p className="text-xs text-gray-400 dark:text-gray-500 italic">No causes yet</p>
+                            )}
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
+              </GlassCard>
+            )}
+
+            {/* RCA Version History */}
+            {rcaList && rcaList.length > 0 && (
+              <GlassCard className="p-5">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+                  <History className="w-4 h-4 text-primary" aria-hidden="true" />
+                  Version History
+                  <span className="text-xs font-normal text-gray-400 ml-1">({rcaList.length} submission{rcaList.length !== 1 ? "s" : ""})</span>
+                </h3>
+                <div className="space-y-2">
+                  {rcaList.map((rca, i) => (
+                    <div
+                      key={rca.cr4c3_rcasubmissionid}
+                      className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${i === 0 ? "bg-primary/5 border border-primary/15" : "bg-gray-50 dark:bg-gray-800/50"}`}
+                    >
+                      <div className="flex-shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 dark:bg-primary/20 text-primary text-xs flex items-center justify-center font-semibold">
+                        {rcaList.length - i}
+                      </div>
+                      <div className="flex-1 min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{rca.cr4c3_rcatitle}</p>
+                          {i === 0 && (
+                            <span className="rounded-full bg-primary/10 text-primary text-xs px-2 py-0.5 font-medium">Current</span>
+                          )}
+                          <StatusBadge status={rca.cr4c3_status} type="rca" />
+                        </div>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatDateTime(rca.cr4c3_submittedat)}</p>
+                        {rca.cr4c3_reviewcomments && (
+                          <p className="mt-1.5 text-xs rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-1 text-amber-700 dark:text-amber-400">
+                            <span className="font-medium">Review: </span>{rca.cr4c3_reviewcomments}
+                          </p>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </GlassCard>
             )}
           </TabsContent>
 
@@ -719,32 +1027,6 @@ export function IncidentDetailPage() {
             <Button variant="outline" onClick={() => setEditDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleEditIncident} disabled={updateIncident.isPending}>
               {updateIncident.isPending ? "Saving…" : "Save Changes"}
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </Dialog>
-
-      {/* Submit RCA Dialog */}
-      <Dialog open={rcaDialogOpen} onOpenChange={setRcaDialogOpen}>
-        <DialogContent className="max-w-lg">
-          <DialogHeader>
-            <DialogTitle>Submit Root Cause Analysis</DialogTitle>
-            <DialogDescription>Provide a title and root cause effect statement for this incident.</DialogDescription>
-          </DialogHeader>
-          <div className="space-y-4 my-2">
-            <div className="space-y-1.5">
-              <Label htmlFor="rca-title">Title <span className="text-red-500" aria-hidden="true">*</span></Label>
-              <Input id="rca-title" value={rcaTitle} onChange={(e) => setRcaTitle(e.target.value)} placeholder="RCA title…" />
-            </div>
-            <div className="space-y-1.5">
-              <Label htmlFor="rca-effect">Effect Statement <span className="text-red-500" aria-hidden="true">*</span></Label>
-              <Textarea id="rca-effect" value={rcaEffect} onChange={(e) => setRcaEffect(e.target.value)} rows={5} placeholder="Describe the root cause and contributing factors…" />
-            </div>
-          </div>
-          <DialogFooter>
-            <Button variant="outline" onClick={() => setRcaDialogOpen(false)}>Cancel</Button>
-            <Button onClick={handleSubmitRCA} disabled={createRCA.isPending}>
-              {createRCA.isPending ? "Submitting…" : "Submit RCA"}
             </Button>
           </DialogFooter>
         </DialogContent>

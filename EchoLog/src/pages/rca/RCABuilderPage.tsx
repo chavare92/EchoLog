@@ -29,27 +29,27 @@ const CATEGORY_COLORS: Record<number, string> = {
   [FISHBONE_CATEGORY.People]: "bg-purple-100 border-purple-300 text-purple-700",
   [FISHBONE_CATEGORY.Process]: "bg-blue-100 border-blue-300 text-blue-700",
   [FISHBONE_CATEGORY.Technology]: "bg-cyan-100 border-cyan-300 text-cyan-700",
-  [FISHBONE_CATEGORY.Data]: "bg-amber-100 border-amber-300 text-amber-700",
+  [FISHBONE_CATEGORY.Material]: "bg-amber-100 border-amber-300 text-amber-700",
   [FISHBONE_CATEGORY.Environment]: "bg-green-100 border-green-300 text-green-700",
-  [FISHBONE_CATEGORY.Governance]: "bg-red-100 border-red-300 text-red-700",
+  [FISHBONE_CATEGORY.Management]: "bg-red-100 border-red-300 text-red-700",
 };
 
 const CATEGORY_HEX: Record<number, string> = {
   [FISHBONE_CATEGORY.People]: "#9333ea",
   [FISHBONE_CATEGORY.Process]: "#2563eb",
   [FISHBONE_CATEGORY.Technology]: "#0891b2",
-  [FISHBONE_CATEGORY.Data]: "#d97706",
+  [FISHBONE_CATEGORY.Material]: "#d97706",
   [FISHBONE_CATEGORY.Environment]: "#16a34a",
-  [FISHBONE_CATEGORY.Governance]: "#dc2626",
+  [FISHBONE_CATEGORY.Management]: "#dc2626",
 };
 
 const CATEGORY_LABELS: Record<number, string> = {
   [FISHBONE_CATEGORY.People]: "People",
   [FISHBONE_CATEGORY.Process]: "Process",
   [FISHBONE_CATEGORY.Technology]: "Technology",
-  [FISHBONE_CATEGORY.Data]: "Data",
+  [FISHBONE_CATEGORY.Material]: "Material",
   [FISHBONE_CATEGORY.Environment]: "Environment",
-  [FISHBONE_CATEGORY.Governance]: "Governance",
+  [FISHBONE_CATEGORY.Management]: "Management",
 };
 
 const rcaSchema = z.object({

@@ -1,10 +1,8 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, FilePlus, FileWarning, ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal, Copy, UserCheck } from "lucide-react";
-import { useAtomValue } from "jotai";
-import { currentUserAtom } from "@/store/authAtoms";
-import { useIncidents, useUpdateIncident } from "@/hooks/useIncidents";
+import { Search, FilePlus, FileWarning, ArrowUpDown, ArrowUp, ArrowDown, MoreHorizontal } from "lucide-react";
+import { useIncidents } from "@/hooks/useIncidents";
 import { useDepartments } from "@/hooks/useDepartments";
 import { useProcesses } from "@/hooks/useProcesses";
 import { INCIDENT_STATUS, SEVERITY } from "@/lib/constants";
@@ -22,7 +20,6 @@ import { Input } from "@/components/ui/input";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
 import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
-import { toast } from "sonner";
 
 type SortField = "created" | "due" | "severity";
 type SortDir = "asc" | "desc";
@@ -31,11 +28,9 @@ const SEVERITY_ORDER: Record<number, number> = { 564060000: 0, 564060001: 1, 564
 
 export function IncidentsListPage() {
   const navigate = useNavigate();
-  const user = useAtomValue(currentUserAtom);
   const { data: incidents, isLoading } = useIncidents();
   const { data: departments } = useDepartments();
   const { data: allProcesses } = useProcesses(undefined, true);
-  const updateIncident = useUpdateIncident();
 
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
@@ -94,20 +89,6 @@ export function IncidentsListPage() {
     return sortDir === "asc"
       ? <ArrowUp className="w-3 h-3 ml-1 text-primary" aria-hidden="true" />
       : <ArrowDown className="w-3 h-3 ml-1 text-primary" aria-hidden="true" />;
-  };
-
-  const handleAssignToMe = async (incidentId: string) => {
-    if (!user?.cr4c3_userprofileid) { toast.error("No user session"); return; }
-    await updateIncident.mutateAsync({
-      id: incidentId,
-      fields: { _cr4c3_assignee_value: user.cr4c3_userprofileid, cr4c3_status: INCIDENT_STATUS.InvestigationPending },
-    });
-    toast.success("Assigned to you");
-  };
-
-  const handleCopyLink = (incidentId: string) => {
-    navigator.clipboard.writeText(`${window.location.origin}/incidents/${incidentId}`);
-    toast.success("Link copied to clipboard");
   };
 
   return (
@@ -243,9 +224,7 @@ export function IncidentsListPage() {
                     </TableCell>
                     <TableCell className="max-w-xs">
                       <p className="truncate font-medium text-gray-900 dark:text-gray-100 text-sm">{inc.cr4c3_title}</p>
-                      {inc._cr4c3_department_value && (
-                        <p className="truncate text-xs text-gray-400 dark:text-gray-500">{getDeptName(inc._cr4c3_department_value)}</p>
-                      )}
+                      <p className="truncate text-xs text-gray-400 dark:text-gray-500">{getDeptName(inc._cr4c3_department_value) ?? "—"}</p>
                     </TableCell>
                     <TableCell className="text-xs text-gray-500 dark:text-gray-400">
                       {getProcessName(inc._cr4c3_process_value) ?? "—"}
@@ -267,14 +246,6 @@ export function IncidentsListPage() {
                         <DropdownMenuContent align="end">
                           <DropdownMenuItem onClick={() => navigate(`/incidents/${inc.cr4c3_incidentid}`)}>
                             View Details
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleAssignToMe(inc.cr4c3_incidentid!)}>
-                            <UserCheck className="w-4 h-4 mr-2" aria-hidden="true" />
-                            Assign to me
-                          </DropdownMenuItem>
-                          <DropdownMenuItem onClick={() => handleCopyLink(inc.cr4c3_incidentid!)}>
-                            <Copy className="w-4 h-4 mr-2" aria-hidden="true" />
-                            Copy link
                           </DropdownMenuItem>
                         </DropdownMenuContent>
                       </DropdownMenu>
