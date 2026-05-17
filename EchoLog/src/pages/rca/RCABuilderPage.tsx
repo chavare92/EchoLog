@@ -169,8 +169,8 @@ export function RCABuilderPage() {
           <ArrowLeft className="w-4 h-4" />
         </Button>
         <div>
-          <h2 className="text-xl font-bold text-gray-900">RCA Builder</h2>
-          <p className="text-xs text-gray-500">{incident?.cr4c3_title}</p>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">RCA Builder</h2>
+          <p className="text-xs text-gray-500 dark:text-gray-400">{incident?.cr4c3_title}</p>
         </div>
         <div className="ml-auto flex gap-2">
           <Button
@@ -194,7 +194,7 @@ export function RCABuilderPage() {
           {/* RCA Header form */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-gray-700 mb-4">RCA Header</h3>
+              <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-4">RCA Header</h3>
               <form onSubmit={handleRCASubmit(saveRCA)} className="space-y-4">
                 <div className="space-y-1.5">
                   <Label htmlFor="rcatitle">RCA Title *</Label>
@@ -225,7 +225,7 @@ export function RCABuilderPage() {
             <motion.div variants={itemVariants}>
               <GlassCard className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-700">
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
                     Causes ({causes?.length ?? 0})
                   </h3>
                   <Button size="sm" variant="outline" onClick={() => setAddingCause(true)}>

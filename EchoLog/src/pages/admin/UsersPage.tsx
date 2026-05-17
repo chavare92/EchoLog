@@ -3,8 +3,7 @@ import { motion } from "framer-motion";
 import { Pencil, Search, Plus } from "lucide-react";
 import { useRoleGuard } from "@/auth/useRoleGuard";
 import { useUserProfiles, useUpdateUserProfile, useCreateUserProfile } from "@/hooks/useUserProfiles";
-import { USER_ROLE } from "@/lib/constants";
-import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
+import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roleLabels";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { SkeletonTable } from "@/components/shared/Skeletons";
 import { Button } from "@/components/ui/button";
@@ -21,25 +20,8 @@ import {
 } from "@/components/ui/dialog";
 import type { Cr4c3_userprofilesBase } from "@/generated/models/Cr4c3_userprofilesModel";
 
-const ROLE_LABELS: Record<number, string> = {
-  [USER_ROLE.Logger]: "Logger",
-  [USER_ROLE.Assignee]: "Assignee",
-  [USER_ROLE.L1Manager]: "L1 Manager",
-  [USER_ROLE.L2Manager]: "L2 Manager",
-  [USER_ROLE.PAOwner]: "PA Owner",
-  [USER_ROLE.Admin]: "Admin",
-  [USER_ROLE.Member]: "Member",
-};
-
-const ROLE_COLORS: Record<number, string> = {
-  [USER_ROLE.Admin]: "bg-red-100 text-red-700",
-  [USER_ROLE.L2Manager]: "bg-purple-100 text-purple-700",
-  [USER_ROLE.L1Manager]: "bg-blue-100 text-blue-700",
-  [USER_ROLE.Assignee]: "bg-amber-100 text-amber-700",
-  [USER_ROLE.PAOwner]: "bg-green-100 text-green-700",
-  [USER_ROLE.Logger]: "bg-gray-100 text-gray-600",
-  [USER_ROLE.Member]: "bg-gray-100 text-gray-500",
-};
+import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
+import { USER_ROLE } from "@/lib/constants";
 
 export function UsersPage() {
   const { isAdmin } = useRoleGuard();
@@ -64,7 +46,7 @@ export function UsersPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Admin access required.</p>
+        <p className="text-gray-500 dark:text-gray-400">Admin access required.</p>
       </div>
     );
   }
@@ -138,7 +120,7 @@ export function UsersPage() {
       <motion.div variants={itemVariants}>
         <GlassCard>
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700">Users ({filtered.length})</h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Users ({filtered.length})</h3>
             <Button size="sm" onClick={() => setAddOpen(true)}>
               <Plus className="w-4 h-4 mr-1" />
               Add User

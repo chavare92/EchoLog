@@ -89,7 +89,7 @@ export function IncidentDetailPage() {
   const [paDueDate, setPaDueDate] = useState("");
 
   if (isLoading) return <div className="p-6"><SkeletonCard /></div>;
-  if (!incident) return <div className="p-8 text-center text-gray-500">Incident not found.</div>;
+  if (!incident) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Incident not found.</div>;
 
   const getDeptName = (val?: string) => departments?.find((d) => d.cr4c3_departmentid === val)?.cr4c3_name;
   const getSubdeptName = (val?: string) => allSubdepts?.find((s) => s.cr4c3_subdepartmentid === val)?.cr4c3_name;
@@ -187,9 +187,9 @@ export function IncidentDetailPage() {
           <ArrowLeft className="w-4 h-4 mr-1" aria-hidden="true" />
           Back
         </Button>
-        <span className="text-gray-300">/</span>
-        <span className="text-xs text-gray-500">Incidents</span>
-        <span className="text-gray-300">/</span>
+        <span className="text-gray-300 dark:text-gray-600">/</span>
+        <span className="text-xs text-gray-500 dark:text-gray-400">Incidents</span>
+        <span className="text-gray-300 dark:text-gray-600">/</span>
         <TicketRef value={incident.cr4c3_ticketreference} />
       </motion.div>
 
@@ -199,12 +199,12 @@ export function IncidentDetailPage() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-start gap-3">
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-gray-900 leading-tight">{incident.cr4c3_title}</h2>
+                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">{incident.cr4c3_title}</h2>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <SeverityBadge severity={incident.cr4c3_severity} />
                   <StatusBadge status={incident.cr4c3_status} />
                   {overdue && incident.cr4c3_status !== INCIDENT_STATUS.PAClosed && (
-                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 px-2 py-0.5 text-xs font-semibold text-red-700">
+                    <span className="inline-flex items-center gap-1 rounded-full bg-red-100 dark:bg-red-950 px-2 py-0.5 text-xs font-semibold text-red-700 dark:text-red-400">
                       <PulseIndicator color="red" />
                       Overdue
                     </span>
@@ -229,16 +229,16 @@ export function IncidentDetailPage() {
 
             {/* Time Status Panel */}
             {incident.cr4c3_status !== INCIDENT_STATUS.PAClosed && (
-              <div className={`rounded-xl p-4 flex flex-wrap gap-4 ${overdue ? "bg-red-50 border border-red-200" : "bg-amber-50 border border-amber-200"}`}>
+              <div className={`rounded-xl p-4 flex flex-wrap gap-4 ${overdue ? "bg-red-50 dark:bg-red-950/30 border border-red-200 dark:border-red-800" : "bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800"}`}>
                 <div className="flex items-center gap-2">
                   <Clock className={`w-4 h-4 ${overdue ? "text-red-500" : "text-amber-600"}`} aria-hidden="true" />
                   <span className="text-sm font-medium">Due:</span>
                   <TATCountdown dueDate={incident.cr4c3_duedate} />
                 </div>
                 {remaining !== null && (
-                  <div className="flex items-center gap-1 text-sm text-gray-600">
+                  <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
                     {overdue
-                      ? <><AlertTriangle className="w-4 h-4 text-red-500" aria-hidden="true" /> <span className="text-red-600 font-medium">{formatDuration(Math.abs(remaining))} overdue</span></>
+                      ? <><AlertTriangle className="w-4 h-4 text-red-500" aria-hidden="true" /> <span className="text-red-600 dark:text-red-400 font-medium">{formatDuration(Math.abs(remaining))} overdue</span></>
                       : <><CheckCircle className="w-4 h-4 text-amber-500" aria-hidden="true" /> <span>{formatDuration(remaining)} remaining</span></>
                     }
                   </div>
@@ -248,12 +248,12 @@ export function IncidentDetailPage() {
 
             {/* Progress bar */}
             <div>
-              <div className="flex justify-between text-xs text-gray-500 mb-1">
+              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
                 {STATUS_STEPS.map((step, i) => (
                   <span key={step.key} className={`${i <= statusIdx ? "text-primary font-medium" : ""}`}>{step.label}</span>
                 ))}
               </div>
-              <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+              <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
                 <div
                   className="h-full rounded-full bg-primary transition-all"
                   style={{ width: `${((statusIdx + 1) / STATUS_STEPS.length) * 100}%` }}
@@ -279,11 +279,11 @@ export function IncidentDetailPage() {
             </TabsTrigger>
             <TabsTrigger value="rca">
               <GitBranch className="w-4 h-4 mr-1.5" aria-hidden="true" />
-              RCA {rcaList && rcaList.length > 0 && <span className="ml-1 rounded-full bg-blue-100 px-1.5 text-xs text-blue-700">{rcaList.length}</span>}
+              RCA {rcaList && rcaList.length > 0 && <span className="ml-1 rounded-full bg-blue-100 dark:bg-blue-950 px-1.5 text-xs text-blue-700 dark:text-blue-400">{rcaList.length}</span>}
             </TabsTrigger>
             <TabsTrigger value="pa">
               <ShieldCheck className="w-4 h-4 mr-1.5" aria-hidden="true" />
-              PA {paList && paList.length > 0 && <span className="ml-1 rounded-full bg-green-100 px-1.5 text-xs text-green-700">{paList.length}</span>}
+              PA {paList && paList.length > 0 && <span className="ml-1 rounded-full bg-green-100 dark:bg-green-950 px-1.5 text-xs text-green-700 dark:text-green-400">{paList.length}</span>}
             </TabsTrigger>
             <TabsTrigger value="audit">
               <GitBranch className="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -297,9 +297,9 @@ export function IncidentDetailPage() {
               <div className="lg:col-span-2 space-y-5">
                 {/* Description */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Description</h3>
-                  <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                    {incident.cr4c3_description || <span className="text-gray-400 italic">No description provided.</span>}
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Description</h3>
+                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
+                    {incident.cr4c3_description || <span className="text-gray-400 dark:text-gray-500 italic">No description provided.</span>}
                   </p>
                 </GlassCard>
 
@@ -308,8 +308,8 @@ export function IncidentDetailPage() {
                   <div className="rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 p-5">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900">Root Cause Analysis Required</p>
-                        <p className="text-xs text-gray-500 mt-0.5">This incident is pending an RCA submission.</p>
+                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Root Cause Analysis Required</p>
+                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This incident is pending an RCA submission.</p>
                       </div>
                       <Button size="sm" onClick={() => setRcaDialogOpen(true)}>
                         Submit RCA
@@ -322,7 +322,7 @@ export function IncidentDetailPage() {
               <div className="space-y-4">
                 {/* Org Path */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-primary" aria-hidden="true" />
                     Org Path
                   </h3>
@@ -334,8 +334,8 @@ export function IncidentDetailPage() {
                       { label: "Team", value: getTeamName(incident._cr4c3_team_value) },
                     ].map(({ label, value }) => value ? (
                       <div key={label} className="flex justify-between gap-2">
-                        <dt className="text-gray-500">{label}</dt>
-                        <dd className="text-gray-900 font-medium text-right">{value}</dd>
+                        <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium text-right">{value}</dd>
                       </div>
                     ) : null)}
                   </dl>
@@ -343,7 +343,7 @@ export function IncidentDetailPage() {
 
                 {/* People */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3 flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-primary" aria-hidden="true" />
                     People
                   </h3>
@@ -353,8 +353,8 @@ export function IncidentDetailPage() {
                       { label: "Assignee", value: getUserName(incident._cr4c3_assignee_value) ?? "Unassigned" },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex justify-between gap-2">
-                        <dt className="text-gray-500">{label}</dt>
-                        <dd className={`font-medium text-right ${value === "Unassigned" ? "text-gray-400 italic" : "text-gray-900"}`}>{value}</dd>
+                        <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
+                        <dd className={`font-medium text-right ${value === "Unassigned" ? "text-gray-400 dark:text-gray-500 italic" : "text-gray-900 dark:text-gray-100"}`}>{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -369,13 +369,13 @@ export function IncidentDetailPage() {
                     ].filter(Boolean);
                     if (parts.length === 0) return null;
                     return (
-                      <div className="mt-3 pt-3 border-t border-gray-100">
-                        <p className="text-xs font-medium text-gray-500 mb-1.5">Assignee Org Path</p>
-                        <div className="flex flex-wrap items-center gap-1 text-xs text-gray-700">
+                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
+                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Assignee Org Path</p>
+                        <div className="flex flex-wrap items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
                           {parts.map((part, i) => (
                             <span key={i} className="flex items-center gap-1">
-                              {i > 0 && <span className="text-gray-300" aria-hidden="true">›</span>}
-                              <span className="rounded bg-gray-100 px-1.5 py-0.5 font-medium">{part}</span>
+                              {i > 0 && <span className="text-gray-300 dark:text-gray-600" aria-hidden="true">›</span>}
+                              <span className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 font-medium">{part}</span>
                             </span>
                           ))}
                         </div>
@@ -386,16 +386,16 @@ export function IncidentDetailPage() {
 
                 {/* Timeline */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 mb-3">Timeline</h3>
+                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Timeline</h3>
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between gap-2">
-                      <dt className="text-gray-500">Created</dt>
-                      <dd className="text-gray-900 font-medium">{formatDate(incident.cr4c3_createdat)}</dd>
+                      <dt className="text-gray-500 dark:text-gray-400">Created</dt>
+                      <dd className="text-gray-900 dark:text-gray-100 font-medium">{formatDate(incident.cr4c3_createdat)}</dd>
                     </div>
                     {incident.cr4c3_updatedat && (
                       <div className="flex justify-between gap-2">
-                        <dt className="text-gray-500">Updated</dt>
-                        <dd className="text-gray-900 font-medium">{formatDate(incident.cr4c3_updatedat)}</dd>
+                        <dt className="text-gray-500 dark:text-gray-400">Updated</dt>
+                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{formatDate(incident.cr4c3_updatedat)}</dd>
                       </div>
                     )}
                   </dl>
@@ -407,7 +407,7 @@ export function IncidentDetailPage() {
           {/* RCA Tab */}
           <TabsContent value="rca" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-800">Root Cause Analysis</h3>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Root Cause Analysis</h3>
               <div className="flex gap-2">
                 {rcaList?.some((r) => r.cr4c3_status === RCA_STATUS.Approved) && (
                   <Button variant="outline" size="sm" onClick={() => window.print()}>
@@ -425,8 +425,8 @@ export function IncidentDetailPage() {
             </div>
             {!rcaList || rcaList.length === 0 ? (
               <GlassCard className="py-12 text-center">
-                <GitBranch className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-gray-500 font-medium">No RCA submitted yet</p>
+                <GitBranch className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No RCA submitted yet</p>
                 {canSubmitRCA && (
                   <Button size="sm" className="mt-4" onClick={() => setRcaDialogOpen(true)}>Submit RCA</Button>
                 )}
@@ -437,14 +437,14 @@ export function IncidentDetailPage() {
                   <GlassCard key={rca.cr4c3_rcasubmissionid} className="p-5">
                     <div className="flex items-start justify-between gap-3 mb-3">
                       <div>
-                        <p className="font-semibold text-gray-900">{rca.cr4c3_rcatitle}</p>
-                        <p className="text-xs text-gray-400 mt-0.5">Submitted {formatDateTime(rca.cr4c3_submittedat)}</p>
+                        <p className="font-semibold text-gray-900 dark:text-gray-100">{rca.cr4c3_rcatitle}</p>
+                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Submitted {formatDateTime(rca.cr4c3_submittedat)}</p>
                       </div>
                       <StatusBadge status={rca.cr4c3_status} type="rca" />
                     </div>
-                    <p className="text-sm text-gray-700 whitespace-pre-wrap">{rca.cr4c3_effectstatement}</p>
+                    <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{rca.cr4c3_effectstatement}</p>
                     {rca.cr4c3_reviewcomments && (
-                      <div className="mt-3 rounded-lg bg-amber-50 border border-amber-200 p-3 text-sm text-amber-800">
+                      <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
                         <span className="font-semibold">Review Comments: </span>{rca.cr4c3_reviewcomments}
                       </div>
                     )}
@@ -457,7 +457,7 @@ export function IncidentDetailPage() {
           {/* PA Tab */}
           <TabsContent value="pa" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-800">Preventive Actions</h3>
+              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Preventive Actions</h3>
               {canCreatePA && (
                 <Button size="sm" onClick={() => setPaDialogOpen(true)}>
                   <PlusCircle className="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -467,8 +467,8 @@ export function IncidentDetailPage() {
             </div>
             {!paList || paList.length === 0 ? (
               <GlassCard className="py-12 text-center">
-                <ShieldCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-gray-500 font-medium">No preventive actions yet</p>
+                <ShieldCheck className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
+                <p className="text-gray-500 dark:text-gray-400 font-medium">No preventive actions yet</p>
                 {canCreatePA && (
                   <Button size="sm" className="mt-4" onClick={() => setPaDialogOpen(true)}>Create PA</Button>
                 )}
@@ -478,8 +478,8 @@ export function IncidentDetailPage() {
                 {paList.map((pa) => (
                   <GlassCard key={pa.cr4c3_preventiveactionid} className="p-4 flex items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 text-sm truncate">{pa.cr4c3_title}</p>
-                      {pa.cr4c3_duedate && <p className="text-xs text-gray-400 mt-0.5">Due {formatDate(pa.cr4c3_duedate)}</p>}
+                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{pa.cr4c3_title}</p>
+                      {pa.cr4c3_duedate && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Due {formatDate(pa.cr4c3_duedate)}</p>}
                     </div>
                     <StatusBadge status={pa.cr4c3_status} type="pa" />
                   </GlassCard>
@@ -490,28 +490,28 @@ export function IncidentDetailPage() {
 
           {/* Audit Tab */}
           <TabsContent value="audit" className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800">Activity Log</h3>
+            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Activity Log</h3>
             {!auditLogs || auditLogs.length === 0 ? (
               <GlassCard className="py-12 text-center">
-                <GitBranch className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-gray-500">No activity recorded yet.</p>
+                <GitBranch className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
+                <p className="text-gray-500 dark:text-gray-400">No activity recorded yet.</p>
               </GlassCard>
             ) : (
               <div className="relative pl-6 space-y-4" role="list" aria-label="Audit log">
-                <div className="absolute left-2 top-2 bottom-2 border-l-2 border-gray-100" aria-hidden="true" />
+                <div className="absolute left-2 top-2 bottom-2 border-l-2 border-gray-100 dark:border-gray-800" aria-hidden="true" />
                 {auditLogs.map((log) => (
                   <div key={log.cr4c3_auditlogid} className="relative" role="listitem">
                     <div className="absolute -left-4 top-1 w-3 h-3 rounded-full bg-primary border-2 border-white" aria-hidden="true" />
                     <GlassCard className="p-4">
                       <div className="flex justify-between gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-gray-900">{log.cr4c3_description}</p>
-                        <time className="text-xs text-gray-400">{formatDateTime(log.cr4c3_timestamp)}</time>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{log.cr4c3_description}</p>
+                        <time className="text-xs text-gray-400 dark:text-gray-500">{formatDateTime(log.cr4c3_timestamp)}</time>
                       </div>
                       {log.cr4c3_fieldchanged && (
                         <div className="mt-2 flex items-center gap-2 text-xs flex-wrap">
-                          <code className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 line-through">{log.cr4c3_oldvalue ?? "—"}</code>
-                          <span className="text-gray-400">→</span>
-                          <code className="px-1.5 py-0.5 rounded bg-green-50 text-green-700">{log.cr4c3_newvalue ?? "—"}</code>
+                          <code className="px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 line-through">{log.cr4c3_oldvalue ?? "—"}</code>
+                          <span className="text-gray-400 dark:text-gray-500">→</span>
+                          <code className="px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400">{log.cr4c3_newvalue ?? "—"}</code>
                         </div>
                       )}
                     </GlassCard>

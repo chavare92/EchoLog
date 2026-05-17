@@ -41,7 +41,7 @@ export function SLARulesPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">Admin access required.</p>
+        <p className="text-gray-500 dark:text-gray-400">Admin access required.</p>
       </div>
     );
   }
@@ -88,7 +88,7 @@ export function SLARulesPage() {
       <motion.div variants={itemVariants}>
         <GlassCard>
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700">SLA Rules ({rules?.length ?? 0})</h3>
+            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">SLA Rules ({rules?.length ?? 0})</h3>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={isLoading}>
                 <RefreshCw className="w-3.5 h-3.5 mr-1" />
@@ -187,8 +187,8 @@ export function SLARulesPage() {
 
       <motion.div variants={itemVariants}>
         <GlassCard className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 mb-2">About SLA Rules</h4>
-          <ul className="text-xs text-gray-500 space-y-1.5 list-disc list-inside">
+          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">About SLA Rules</h4>
+          <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1.5 list-disc list-inside">
             <li>TAT Hours = Total time from incident creation to closure (in hours)</li>
             <li>L1 Review % = Percentage of incidents this severity requiring L1 review</li>
             <li>Changes take effect for newly created incidents only</li>

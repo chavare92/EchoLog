@@ -32,8 +32,8 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                     isCompleted
                       ? "bg-green-500 border-green-500 text-white"
                       : isActive
-                      ? "bg-white border-primary text-primary ring-4 ring-primary/20"
-                      : "bg-white border-gray-200 text-gray-400"
+                      ? "bg-white dark:bg-gray-900 border-primary text-primary ring-4 ring-primary/20"
+                      : "bg-white dark:bg-gray-900 border-gray-200 dark:border-gray-700 text-gray-400 dark:text-gray-500"
                   )}
                   aria-current={isActive ? "step" : undefined}
                 >
@@ -51,13 +51,13 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
                         ? "text-green-600"
                         : isActive
                         ? "text-primary"
-                        : "text-gray-400"
+                        : "text-gray-400 dark:text-gray-500"
                     )}
                   >
                     {step.label}
                   </span>
                   {step.optional && (
-                    <span className="text-[10px] text-gray-400 leading-tight">optional</span>
+                    <span className="text-[10px] text-gray-400 dark:text-gray-500 leading-tight">optional</span>
                   )}
                 </div>
               </div>
@@ -65,7 +65,7 @@ export function StepIndicator({ steps, currentStep, className }: StepIndicatorPr
               {/* Connecting line */}
               {idx < steps.length - 1 && (
                 <div className="flex-1 mx-2 mt-[-18px]">
-                  <div className="h-0.5 w-full bg-gray-200 relative overflow-hidden rounded-full">
+                  <div className="h-0.5 w-full bg-gray-200 dark:bg-gray-700 relative overflow-hidden rounded-full">
                     <div
                       className="h-full bg-green-500 transition-all duration-500 rounded-full"
                       style={{ width: idx < currentStep ? "100%" : "0%" }}

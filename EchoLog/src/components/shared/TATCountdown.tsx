@@ -17,7 +17,7 @@ export function TATCountdown({ dueDate, className }: TATCountdownProps) {
     return () => clearInterval(timer);
   }, [dueDate]);
 
-  if (!dueDate) return <span className="text-gray-500 text-xs">—</span>;
+  if (!dueDate) return <span className="text-gray-500 dark:text-gray-400 text-xs">—</span>;
 
   const isOverdue = remaining <= 0;
   const isUrgent = remaining > 0 && remaining < 2 * 60 * 60 * 1000; // < 2h
@@ -27,10 +27,10 @@ export function TATCountdown({ dueDate, className }: TATCountdownProps) {
       className={cn(
         "inline-flex items-center gap-1 text-xs font-mono",
         isOverdue
-          ? "text-red-600"
+          ? "text-red-600 dark:text-red-400"
           : isUrgent
-          ? "text-amber-600"
-          : "text-gray-500",
+          ? "text-amber-600 dark:text-amber-400"
+          : "text-gray-500 dark:text-gray-400",
         className
       )}
     >

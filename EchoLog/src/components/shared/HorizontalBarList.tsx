@@ -21,10 +21,10 @@ export function HorizontalBarList({ items, className }: HorizontalBarListProps) 
         return (
           <div key={item.label}>
             <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-600 truncate max-w-[60%]">{item.label}</span>
-              <span className="text-xs font-semibold text-gray-800 tabular-nums">{item.count}</span>
+              <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{item.label}</span>
+              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 tabular-nums">{item.count}</span>
             </div>
-            <div className="h-2 rounded-full bg-gray-100 overflow-hidden">
+            <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
               <div
                 className={cn(
                   "h-full rounded-full transition-all duration-700",

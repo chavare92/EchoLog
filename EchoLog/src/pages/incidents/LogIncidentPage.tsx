@@ -148,10 +148,10 @@ export function LogIncidentPage() {
           <div className="p-2 rounded-lg bg-primary/10">
             <FileWarning className="w-5 h-5 text-primary" aria-hidden="true" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900">Log New Incident</h2>
+          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Log New Incident</h2>
         </div>
         <div className="hidden sm:flex items-center gap-2">
-          <span className="text-xs text-gray-500">Reference preview:</span>
+          <span className="text-xs text-gray-500 dark:text-gray-400">Reference preview:</span>
           <TicketRef value={ticketPreview} />
         </div>
       </motion.div>
@@ -282,14 +282,14 @@ export function LogIncidentPage() {
                       className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                         field.value === String(val)
                           ? "border-primary bg-primary/5 shadow-sm"
-                          : "border-gray-200 bg-transparent hover:bg-gray-50"
+                          : "border-gray-200 dark:border-gray-700 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800"
                       }`}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className={`w-2 h-2 rounded-full ${SEVERITY_DOT_COLORS[String(val)]}`} aria-hidden="true" />
                         <SeverityBadge severity={val} />
                       </div>
-                      <span className="text-xs text-gray-500">{SEVERITY_TAT_LABELS[String(val)]}</span>
+                      <span className="text-xs text-gray-500 dark:text-gray-400">{SEVERITY_TAT_LABELS[String(val)]}</span>
                     </button>
                   )} />
                 ))}

@@ -90,7 +90,7 @@ export function IncidentsListPage() {
   const overdueCount = (incidents ?? []).filter((i) => i.cr4c3_status !== INCIDENT_STATUS.PAClosed && isOverdue(i.cr4c3_duedate)).length;
 
   const SortIcon = ({ field }: { field: SortField }) => {
-    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1 text-gray-400" aria-hidden="true" />;
+    if (sortField !== field) return <ArrowUpDown className="w-3 h-3 ml-1 text-gray-400 dark:text-gray-500" aria-hidden="true" />;
     return sortDir === "asc"
       ? <ArrowUp className="w-3 h-3 ml-1 text-primary" aria-hidden="true" />
       : <ArrowDown className="w-3 h-3 ml-1 text-primary" aria-hidden="true" />;
@@ -119,8 +119,8 @@ export function IncidentsListPage() {
             <FileWarning className="w-5 h-5 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Incidents</h2>
-            <p className="text-xs text-gray-500">{filtered.length} incident{filtered.length !== 1 ? "s" : ""} shown</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-300">Incidents</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{filtered.length} incident{filtered.length !== 1 ? "s" : ""} shown</p>
           </div>
         </div>
         <Button size="sm" onClick={() => navigate("/log-incident")}>
@@ -133,10 +133,10 @@ export function IncidentsListPage() {
       {!isLoading && (
         <motion.div variants={itemVariants} className="flex flex-wrap gap-2" role="status" aria-label="Incident statistics">
           {[
-            { label: "Total", count: total, cls: "bg-slate-100 text-slate-700 border-slate-200" },
-            { label: "Active", count: activeCount, cls: "bg-blue-50 text-blue-700 border-blue-200" },
-            { label: "Critical", count: criticalCount, cls: "bg-red-50 text-red-700 border-red-200", pulse: criticalCount > 0 },
-            { label: "Overdue", count: overdueCount, cls: "bg-amber-50 text-amber-700 border-amber-200", pulse: overdueCount > 0 },
+            { label: "Total", count: total, cls: "bg-slate-100 dark:bg-slate-800 text-slate-700 dark:text-slate-300 border-slate-200 dark:border-slate-700" },
+            { label: "Active", count: activeCount, cls: "bg-blue-50 dark:bg-blue-900/20 text-blue-700 dark:text-blue-300 border-blue-200 dark:border-blue-800" },
+            { label: "Critical", count: criticalCount, cls: "bg-red-50 dark:bg-red-900/20 text-red-700 dark:text-red-300 border-red-200 dark:border-red-800", pulse: criticalCount > 0 },
+            { label: "Overdue", count: overdueCount, cls: "bg-amber-50 dark:bg-amber-900/20 text-amber-700 dark:text-amber-300 border-amber-200 dark:border-amber-800", pulse: overdueCount > 0 },
           ].map(({ label, count, cls, pulse }) => (
             <span key={label} className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold ${cls}`}>
               {pulse && <PulseIndicator color={label === "Critical" ? "red" : "amber"} />}
@@ -151,7 +151,7 @@ export function IncidentsListPage() {
         <GlassCard className="p-4">
           <div className="flex flex-wrap gap-3">
             <div className="relative flex-1 min-w-[200px]">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400 dark:text-gray-500" aria-hidden="true" />
               <Input
                 placeholder="Search by ticket, title or description…"
                 className="pl-9"
@@ -193,9 +193,9 @@ export function IncidentsListPage() {
             <div className="p-4"><SkeletonTable rows={8} columns={7} /></div>
           ) : filtered.length === 0 ? (
             <div className="py-16 text-center">
-              <FileWarning className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
-              <p className="text-gray-500 font-medium">No incidents found</p>
-              <p className="text-sm text-gray-400 mt-1">Try adjusting your search or filter criteria.</p>
+              <FileWarning className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
+              <p className="text-gray-500 dark:text-gray-400 font-medium">No incidents found</p>
+              <p className="text-sm text-gray-400 dark:text-gray-500 mt-1">Try adjusting your search or filter criteria.</p>
             </div>
           ) : (
             <Table>
@@ -235,26 +235,26 @@ export function IncidentsListPage() {
                     initial={{ opacity: 0, y: 4 }}
                     animate={{ opacity: 1, y: 0 }}
                     transition={{ delay: idx * 0.03 }}
-                    className="cursor-pointer hover:bg-gray-50/80 transition-colors"
+                    className="cursor-pointer hover:bg-gray-50 dark:hover:bg-gray-800/80 transition-colors"
                     onClick={() => navigate(`/incidents/${inc.cr4c3_incidentid}`)}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()}>
                       <TicketRef value={inc.cr4c3_ticketreference} />
                     </TableCell>
                     <TableCell className="max-w-xs">
-                      <p className="truncate font-medium text-gray-900 text-sm">{inc.cr4c3_title}</p>
+                      <p className="truncate font-medium text-gray-900 dark:text-gray-100 text-sm">{inc.cr4c3_title}</p>
                       {inc._cr4c3_department_value && (
-                        <p className="truncate text-xs text-gray-400">{getDeptName(inc._cr4c3_department_value)}</p>
+                        <p className="truncate text-xs text-gray-400 dark:text-gray-500">{getDeptName(inc._cr4c3_department_value)}</p>
                       )}
                     </TableCell>
-                    <TableCell className="text-xs text-gray-500">
+                    <TableCell className="text-xs text-gray-500 dark:text-gray-400">
                       {getProcessName(inc._cr4c3_process_value) ?? "—"}
                     </TableCell>
                     <TableCell><SeverityBadge severity={inc.cr4c3_severity} /></TableCell>
                     <TableCell><StatusBadge status={inc.cr4c3_status} /></TableCell>
                     <TableCell>
                       {inc.cr4c3_status === INCIDENT_STATUS.PAClosed
-                        ? <span className="text-xs text-gray-400">—</span>
+                        ? <span className="text-xs text-gray-400 dark:text-gray-500">—</span>
                         : <TATCountdown dueDate={inc.cr4c3_duedate} />}
                     </TableCell>
                     <TableCell onClick={(e) => e.stopPropagation()}>
