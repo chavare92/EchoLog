@@ -1,173 +1,261 @@
-import { useState } from "react";
-import { useNavigate } from "react-router-dom";
+import { useState, useMemo } from "react";
+import { useAtomValue } from "jotai";
 import { motion } from "framer-motion";
-import { CheckCircle, XCircle, Clock } from "lucide-react";
-import { useRoleGuard } from "@/auth/useRoleGuard";
+import { Search, Gavel, CheckCircle, XCircle, Target, AlertTriangle } from "lucide-react";
+import { currentUserAtom } from "@/store/authAtoms";
 import { useRCASubmissions, useUpdateRCA } from "@/hooks/useRCASubmissions";
-import { useIncidents } from "@/hooks/useIncidents";
-import { RCA_STATUS } from "@/lib/constants";
-import { formatDateTime } from "@/lib/utils";
+import { useIncidents, useUpdateIncident } from "@/hooks/useIncidents";
+import { useUserProfiles } from "@/hooks/useUserProfiles";
+import { useCreateAuditLog } from "@/hooks/useAuditLogs";
+import { useCreateNotification } from "@/hooks/useNotifications";
+import { RCA_STATUS, INCIDENT_STATUS } from "@/lib/constants";
+import { formatDateTime, calculateL1Window } from "@/lib/utils";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { SeverityBadge } from "@/components/shared/SeverityBadge";
-import { TATCountdown } from "@/components/shared/TATCountdown";
 import { TicketRef } from "@/components/shared/TicketRef";
 import { SkeletonCards } from "@/components/shared/Skeletons";
 import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
 import { Textarea } from "@/components/ui/textarea";
 import { Label } from "@/components/ui/label";
-import {
-  Dialog,
-  DialogContent,
-  DialogDescription,
-  DialogFooter,
-  DialogHeader,
-  DialogTitle,
-} from "@/components/ui/dialog";
+import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogTitle } from "@/components/ui/dialog";
+import { Badge } from "@/components/ui/badge";
+import { toast } from "sonner";
 
-type ReviewAction = "approve" | "reject";
+type TabType = "review" | "escalated" | "critical";
+
+const SEVERITY_BORDER: Record<number, string> = {
+  564060000: "border-l-red-500",
+  564060001: "border-l-amber-400",
+  564060002: "border-l-blue-400",
+};
 
 export function ReviewQueuePage() {
-  const navigate = useNavigate();
-  const { isAdmin, isL1Manager, isL2Manager } = useRoleGuard();
+  const user = useAtomValue(currentUserAtom);
   const { data: allRCAs, isLoading } = useRCASubmissions();
   const { data: incidents } = useIncidents();
+  const { data: userProfiles } = useUserProfiles();
   const updateRCA = useUpdateRCA();
+  const updateIncident = useUpdateIncident();
+  const createAuditLog = useCreateAuditLog();
+  const createNotification = useCreateNotification();
 
+  const [activeTab, setActiveTab] = useState<TabType>("review");
+  const [search, setSearch] = useState("");
   const [selectedRCA, setSelectedRCA] = useState<string | null>(null);
-  const [action, setAction] = useState<ReviewAction | null>(null);
+  const [action, setAction] = useState<"approve" | "reject">("approve");
   const [comment, setComment] = useState("");
-  const [commentError, setCommentError] = useState("");
 
-  if (!isAdmin && !isL1Manager && !isL2Manager) {
-    return (
-      <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500">You don't have permission to access the review queue.</p>
-      </div>
-    );
-  }
+  const getIncident = (id?: string) => incidents?.find((i) => i.cr4c3_incidentid === id);
+  const getUserName = (id?: string) => userProfiles?.find((u) => u.cr4c3_userprofileid === id)?.cr4c3_fullname ?? "Unknown";
 
-  const pendingRCAs = (allRCAs ?? []).filter(
-    (r) =>
+  const pendingRCAs = useMemo(() =>
+    (allRCAs ?? []).filter((r) =>
       r.cr4c3_status === RCA_STATUS.Submitted ||
       r.cr4c3_status === RCA_STATUS.UnderReview ||
       r.cr4c3_status === RCA_STATUS.PendingL1Review ||
       r.cr4c3_status === RCA_STATUS.PendingL2Review
-  );
+    ), [allRCAs]);
 
-  const getIncident = (rcaIncidentId: string | undefined) =>
-    incidents?.find((i) => i.cr4c3_incidentid === rcaIncidentId);
+  const criticalRCAs = useMemo(() =>
+    pendingRCAs.filter((r) => {
+      const inc = getIncident(r._cr4c3_incident_value ?? "");
+      return inc?.cr4c3_severity === 564060000;
+    }), [pendingRCAs, incidents]);
 
-  const openDialog = (rcaId: string, a: ReviewAction) => {
+  const escalatedRCAs = useMemo(() =>
+    pendingRCAs.filter((r) => {
+      const inc = getIncident(r._cr4c3_incident_value ?? "");
+      if (!inc) return false;
+      const l1Window = calculateL1Window(new Date(inc.cr4c3_createdat ?? Date.now()), inc.cr4c3_severity ?? 564060002);
+      return l1Window < new Date() || (inc.cr4c3_rejectioncount ?? 0) >= 2;
+    }), [pendingRCAs, incidents]);
+
+  const applySearch = (list: typeof pendingRCAs) =>
+    list.filter((r) => {
+      if (!search) return true;
+      const q = search.toLowerCase();
+      const inc = getIncident(r._cr4c3_incident_value ?? "");
+      return (
+        r.cr4c3_rcatitle?.toLowerCase().includes(q) ||
+        inc?.cr4c3_title?.toLowerCase().includes(q) ||
+        inc?.cr4c3_ticketreference?.toLowerCase().includes(q)
+      );
+    });
+
+  const reviewList = applySearch(pendingRCAs);
+  const escalatedList = applySearch(escalatedRCAs);
+  const criticalList = applySearch(criticalRCAs);
+
+  const currentList = activeTab === "review" ? reviewList : activeTab === "escalated" ? escalatedList : criticalList;
+
+  const openReviewDialog = (rcaId: string, act: "approve" | "reject") => {
     setSelectedRCA(rcaId);
-    setAction(a);
+    setAction(act);
     setComment("");
-    setCommentError("");
   };
 
-  const handleReview = async () => {
-    if (!comment.trim()) {
-      setCommentError("A comment is required for review decisions.");
-      return;
-    }
-    if (!selectedRCA || !action) return;
+  const handleReviewSubmit = async () => {
+    if (!selectedRCA) return;
+    if (action === "reject" && !comment.trim()) { toast.error("Comment is required for rejection"); return; }
 
-    const rca = pendingRCAs.find((r) => r.cr4c3_rcasubmissionid === selectedRCA);
+    const rca = (allRCAs ?? []).find((r) => r.cr4c3_rcasubmissionid === selectedRCA);
     if (!rca) return;
+    const inc = getIncident(rca._cr4c3_incident_value ?? "");
 
-    let newStatus: number;
-    if (action === "approve") {
-      newStatus =
-        rca.cr4c3_status === RCA_STATUS.Submitted
-          ? RCA_STATUS.UnderReview
-          : RCA_STATUS.Approved;
-    } else {
-      newStatus = RCA_STATUS.Rejected;
-    }
+    const newStatus = action === "approve" ? RCA_STATUS.Approved : RCA_STATUS.Rejected;
+    const newIncidentStatus = action === "approve" ? INCIDENT_STATUS.RCAApproved : INCIDENT_STATUS.RCARejected;
 
     await updateRCA.mutateAsync({
       id: selectedRCA,
       fields: {
         cr4c3_status: newStatus,
-        cr4c3_reviewcomments: comment,
+        cr4c3_reviewcomments: comment || undefined,
         cr4c3_reviewedat: new Date().toISOString(),
+        _cr4c3_reviewer_value: user?.cr4c3_userprofileid,
       },
     });
 
+    if (rca._cr4c3_incident_value) {
+      await updateIncident.mutateAsync({
+        id: rca._cr4c3_incident_value,
+        fields: { cr4c3_status: newIncidentStatus },
+      });
+    }
+
+    await createAuditLog.mutateAsync({
+      cr4c3_description: `RCA ${action === "approve" ? "approved" : "rejected"}: ${rca.cr4c3_rcatitle}`,
+      cr4c3_entitytype: "RCASubmission",
+      cr4c3_entityid: selectedRCA,
+      cr4c3_fieldchanged: "cr4c3_status",
+      cr4c3_oldvalue: String(rca.cr4c3_status ?? ""),
+      cr4c3_newvalue: String(newStatus),
+      cr4c3_timestamp: new Date().toISOString(),
+      _cr4c3_actor_value: user?.cr4c3_userprofileid,
+      cr4c3_actorrole: "Reviewer",
+      cr4c3_action: action === "approve" ? 1 : 2,
+    });
+
+    if (inc?._cr4c3_loggedby_value) {
+      await createNotification.mutateAsync({
+        cr4c3_message: `Your RCA "${rca.cr4c3_rcatitle}" has been ${action === "approve" ? "approved" : "rejected"}.${comment ? ` Comment: ${comment}` : ""}`,
+        cr4c3_isread: false,
+        cr4c3_createdat: new Date().toISOString(),
+        _cr4c3_user_value: inc._cr4c3_loggedby_value,
+        _cr4c3_incident_value: rca._cr4c3_incident_value,
+      });
+    }
+
     setSelectedRCA(null);
-    setAction(null);
     setComment("");
+    toast.success(`RCA ${action === "approve" ? "approved" : "rejected"}`);
   };
 
   return (
-    <PageWrapper title="Review Queue">
+    <PageWrapper>
+      {/* Header */}
+      <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+        <div className="flex items-center gap-2">
+          <div className="p-2 rounded-lg bg-primary/10">
+            <Gavel className="w-5 h-5 text-primary" aria-hidden="true" />
+          </div>
+          <div>
+            <h2 className="text-xl font-bold text-gray-900">Review Queue</h2>
+            <p className="text-xs text-gray-500">{pendingRCAs.length} RCA{pendingRCAs.length !== 1 ? "s" : ""} pending review</p>
+          </div>
+        </div>
+        <div className="relative max-w-xs w-full">
+          <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
+          <Input
+            placeholder="Search RCAs…"
+            className="pl-9"
+            value={search}
+            onChange={(e) => setSearch(e.target.value)}
+            aria-label="Search RCAs"
+          />
+        </div>
+      </motion.div>
+
+      {/* Tabs */}
+      <motion.div variants={itemVariants} className="flex gap-2 flex-wrap" role="tablist" aria-label="Review categories">
+        {([
+          { id: "review" as TabType, label: "Pending Review", count: reviewList.length },
+          { id: "escalated" as TabType, label: "Escalated", count: escalatedList.length },
+          { id: "critical" as TabType, label: "Critical", count: criticalList.length },
+        ]).map(({ id, label, count }) => (
+          <button
+            key={id}
+            role="tab"
+            aria-selected={activeTab === id}
+            onClick={() => setActiveTab(id)}
+            className={`inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
+              activeTab === id
+                ? "bg-primary text-white border-primary shadow-sm"
+                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+            }`}
+          >
+            {label}
+            {count > 0 && (
+              <Badge className={`px-1.5 py-0 text-xs ${activeTab === id ? "bg-white/20 text-white border-0" : "bg-gray-100 text-gray-600 border-0"}`}>
+                {count}
+              </Badge>
+            )}
+          </button>
+        ))}
+      </motion.div>
+
+      {/* Card grid */}
       {isLoading ? (
-        <SkeletonCards count={4} />
-      ) : pendingRCAs.length === 0 ? (
+        <SkeletonCards count={3} />
+      ) : currentList.length === 0 ? (
         <motion.div variants={itemVariants}>
           <GlassCard className="py-16 text-center">
-            <CheckCircle className="w-10 h-10 text-green-600 mx-auto mb-3" />
-            <p className="text-gray-700 font-medium">All caught up!</p>
-            <p className="text-sm text-gray-400 mt-1">No RCA submissions pending review.</p>
+            <Gavel className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
+            <p className="text-gray-500 font-medium">No RCAs in this category</p>
           </GlassCard>
         </motion.div>
       ) : (
-        <div className="space-y-4">
-          {pendingRCAs.map((rca) => {
-            const inc = getIncident(rca._cr4c3_incident_value);
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4" role="list">
+          {currentList.map((rca, idx) => {
+            const inc = getIncident(rca._cr4c3_incident_value ?? "");
+            const borderColor = SEVERITY_BORDER[inc?.cr4c3_severity ?? 564060002] ?? "border-l-gray-200";
             return (
-              <motion.div key={rca.cr4c3_rcasubmissionid} variants={itemVariants}>
-                <GlassCard className="p-5">
-                  <div className="flex items-start gap-4">
-                    <div className="flex-1 min-w-0">
-                      <div className="flex items-center gap-2 flex-wrap mb-2">
-                        {inc && <TicketRef value={inc.cr4c3_ticketreference} />}
-                        {inc && <SeverityBadge severity={inc.cr4c3_severity} />}
-                        <StatusBadge status={rca.cr4c3_status} type="rca" />
-                        <span className="text-xs text-gray-400">
-                          <Clock className="inline w-3 h-3 mr-0.5" />
-                          {formatDateTime(rca.cr4c3_submittedat)}
-                        </span>
-                      </div>
-                      <p className="text-base font-semibold text-gray-900 truncate">{rca.cr4c3_rcatitle}</p>
-                      {inc && (
-                        <p className="text-xs text-gray-500 mt-0.5 truncate">{inc.cr4c3_title}</p>
-                      )}
-                      {rca.cr4c3_effectstatement && (
-                        <p className="text-sm text-gray-500 mt-2 line-clamp-2">{rca.cr4c3_effectstatement}</p>
-                      )}
-                      {inc && (
-                        <div className="mt-2">
-                          <TATCountdown dueDate={inc.cr4c3_duedate} />
-                        </div>
-                      )}
+              <motion.div
+                key={rca.cr4c3_rcasubmissionid}
+                role="listitem"
+                variants={itemVariants}
+                initial={{ opacity: 0, y: 8 }}
+                animate={{ opacity: 1, y: 0 }}
+                transition={{ delay: idx * 0.04 }}
+              >
+                <GlassCard className={`p-5 border-l-4 ${borderColor} h-full flex flex-col gap-3`}>
+                  <div className="flex items-start justify-between gap-2">
+                    <div className="flex items-center gap-2">
+                      <Target className="w-4 h-4 text-gray-400 flex-shrink-0" aria-hidden="true" />
+                      <TicketRef value={inc?.cr4c3_ticketreference} />
                     </div>
-                    <div className="flex flex-col gap-2 shrink-0">
-                      <Button
-                        size="sm"
-                        variant="outline"
-                        onClick={() => navigate(`/incidents/${rca._cr4c3_incident_value}`)}
-                      >
-                        View Incident
-                      </Button>
-                      <Button
-                        size="sm"
-                        className="bg-green-600 hover:bg-green-500 text-white border-0"
-                        onClick={() => openDialog(rca.cr4c3_rcasubmissionid!, "approve")}
-                      >
-                        <CheckCircle className="w-4 h-4 mr-1" />
-                        Approve
-                      </Button>
-                      <Button
-                        size="sm"
-                        variant="destructive"
-                        onClick={() => openDialog(rca.cr4c3_rcasubmissionid!, "reject")}
-                      >
-                        <XCircle className="w-4 h-4 mr-1" />
-                        Reject
-                      </Button>
-                    </div>
+                    <SeverityBadge severity={inc?.cr4c3_severity} />
+                  </div>
+                  <div className="flex-1">
+                    <p className="text-sm font-semibold text-gray-900 line-clamp-2">{rca.cr4c3_rcatitle}</p>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{rca.cr4c3_effectstatement}</p>
+                  </div>
+                  <div className="flex items-center justify-between text-xs text-gray-400">
+                    <span>By {getUserName(rca._cr4c3_submittedby_value)}</span>
+                    <span>{formatDateTime(rca.cr4c3_submittedat)}</span>
+                  </div>
+                  <StatusBadge status={rca.cr4c3_status} type="rca" />
+                  <div className="flex gap-2 mt-auto">
+                    <Button size="sm" className="flex-1 bg-green-600 hover:bg-green-700 focus:ring-green-500" onClick={() => openReviewDialog(rca.cr4c3_rcasubmissionid!, "approve")}>
+                      <CheckCircle className="w-4 h-4 mr-1" aria-hidden="true" />
+                      Approve
+                    </Button>
+                    <Button size="sm" variant="outline" className="flex-1 text-red-600 border-red-200 hover:bg-red-50" onClick={() => openReviewDialog(rca.cr4c3_rcasubmissionid!, "reject")}>
+                      <XCircle className="w-4 h-4 mr-1" aria-hidden="true" />
+                      Reject
+                    </Button>
                   </div>
                 </GlassCard>
               </motion.div>
@@ -180,40 +268,48 @@ export function ReviewQueuePage() {
       <Dialog open={!!selectedRCA} onOpenChange={(open) => { if (!open) setSelectedRCA(null); }}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>
+            <DialogTitle className="flex items-center gap-2">
+              {action === "approve"
+                ? <CheckCircle className="w-5 h-5 text-green-600" aria-hidden="true" />
+                : <XCircle className="w-5 h-5 text-red-600" aria-hidden="true" />}
               {action === "approve" ? "Approve RCA" : "Reject RCA"}
             </DialogTitle>
             <DialogDescription>
               {action === "approve"
-                ? "Confirm approval. Add a comment to support your decision."
-                : "Reject this RCA submission and provide feedback for revision."}
+                ? "Approving this RCA will move the incident to PA stage."
+                : "Rejecting will require the assignee to resubmit. Comment required."}
             </DialogDescription>
           </DialogHeader>
-          <div className="space-y-3">
-            <Label htmlFor="review-comment">
-              Review Comment <span className="text-red-600">*</span>
-            </Label>
-            <Textarea
-              id="review-comment"
-              value={comment}
-              onChange={(e) => { setComment(e.target.value); setCommentError(""); }}
-              placeholder="Add your review comments here…"
-              rows={4}
-            />
-            {commentError && <p className="text-xs text-red-600">{commentError}</p>}
+          <div className="space-y-3 my-2">
+            {action === "reject" && (
+              <div className="rounded-lg bg-red-50 border border-red-200 p-3 text-sm text-red-700 flex items-center gap-2">
+                <AlertTriangle className="w-4 h-4 flex-shrink-0" aria-hidden="true" />
+                A comment is required when rejecting.
+              </div>
+            )}
+            <div className="space-y-1.5">
+              <Label htmlFor="review-comment">
+                {action === "reject" ? "Rejection Reason" : "Comment"}{" "}
+                {action === "reject" && <span className="text-red-500" aria-hidden="true">*</span>}
+              </Label>
+              <Textarea
+                id="review-comment"
+                value={comment}
+                onChange={(e) => setComment(e.target.value)}
+                rows={3}
+                placeholder={action === "approve" ? "Optional comments…" : "Explain the reason for rejection…"}
+                aria-required={action === "reject"}
+              />
+            </div>
           </div>
           <DialogFooter>
             <Button variant="outline" onClick={() => setSelectedRCA(null)}>Cancel</Button>
             <Button
-              onClick={handleReview}
+              onClick={handleReviewSubmit}
               disabled={updateRCA.isPending}
-              className={action === "reject" ? "bg-red-600 hover:bg-red-500 border-0 text-white" : ""}
+              className={action === "approve" ? "bg-green-600 hover:bg-green-700" : "bg-red-600 hover:bg-red-700"}
             >
-              {updateRCA.isPending
-                ? "Processing…"
-                : action === "approve"
-                ? "Confirm Approval"
-                : "Confirm Rejection"}
+              {updateRCA.isPending ? "Submitting…" : action === "approve" ? "Approve" : "Reject"}
             </Button>
           </DialogFooter>
         </DialogContent>

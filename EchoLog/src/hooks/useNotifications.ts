@@ -52,3 +52,15 @@ export function useMarkAllNotificationsRead() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Operation failed"),
   });
 }
+
+export function useCreateNotification() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (record: Omit<Cr4c3_notificationsBase, "cr4c3_notificationid">) => {
+      const result = await Cr4c3_notificationsService.create(record);
+      return unwrapResult(result);
+    },
+    onSuccess: () => qc.invalidateQueries({ queryKey: [NOTIFICATIONS_KEY] }),
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Failed to create notification"),
+  });
+}
