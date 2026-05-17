@@ -162,8 +162,8 @@ export function ReviewQueuePage() {
             <Gavel className="w-5 h-5 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Review Queue</h2>
-            <p className="text-xs text-gray-500">{pendingRCAs.length} RCA{pendingRCAs.length !== 1 ? "s" : ""} pending review</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Review Queue</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{pendingRCAs.length} RCA{pendingRCAs.length !== 1 ? "s" : ""} pending review</p>
           </div>
         </div>
         <div className="relative max-w-xs w-full">
@@ -193,7 +193,7 @@ export function ReviewQueuePage() {
             className={`inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
               activeTab === id
                 ? "bg-primary text-white border-primary shadow-sm"
-                : "bg-white text-gray-600 border-gray-200 hover:bg-gray-50"
+                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
             }`}
           >
             {label}
@@ -239,10 +239,10 @@ export function ReviewQueuePage() {
                     <SeverityBadge severity={inc?.cr4c3_severity} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900 line-clamp-2">{rca.cr4c3_rcatitle}</p>
-                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{rca.cr4c3_effectstatement}</p>
+                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">{rca.cr4c3_rcatitle}</p>
+                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{rca.cr4c3_effectstatement}</p>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-400">
+                  <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
                     <span>By {getUserName(rca._cr4c3_submittedby_value)}</span>
                     <span>{formatDateTime(rca.cr4c3_submittedat)}</span>
                   </div>

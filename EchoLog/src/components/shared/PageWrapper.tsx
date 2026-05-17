@@ -28,11 +28,11 @@ export function PageWrapper({ children, title, actions }: PageWrapperProps) {
       className="space-y-6"
     >
       {(title ?? actions) && (
-        <motion.div variants={itemVariants} className="flex items-center justify-between">
+        <motion.div variants={itemVariants} className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           {title && (
-            <h2 className="text-xl font-bold text-gray-900 tracking-tight">{title}</h2>
+            <h1 className="text-xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">{title}</h1>
           )}
-          {actions && <div className="flex items-center gap-2">{actions}</div>}
+          {actions && <div className="flex items-center gap-2 flex-wrap">{actions}</div>}
         </motion.div>
       )}
       {children}

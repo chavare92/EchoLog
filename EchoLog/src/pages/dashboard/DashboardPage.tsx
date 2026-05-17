@@ -67,7 +67,7 @@ function MetricCard({ label, value, icon: Icon, color, bgColor, pulse, trend, tr
       >
         <div className="flex items-start justify-between">
           <div>
-            <p className="text-xs font-medium text-gray-500 uppercase tracking-wide mb-1">{label}</p>
+            <p className="text-xs font-medium text-gray-500 dark:text-gray-400 uppercase tracking-wide mb-1">{label}</p>
             <p className={`text-3xl font-bold ${color}`}>{value}</p>
           </div>
           <div className={`p-2.5 rounded-xl ${bgColor}`}>
@@ -78,7 +78,7 @@ function MetricCard({ label, value, icon: Icon, color, bgColor, pulse, trend, tr
           {pulse ? (
             <>
               <PulseIndicator color="red" />
-              <span className="text-xs text-gray-500">Requires attention</span>
+              <span className="text-xs text-gray-500 dark:text-gray-400">Requires attention</span>
             </>
           ) : trend && trendLabel ? (
             <span className={`inline-flex items-center gap-1 text-xs ${trend === "up" ? "text-green-600" : trend === "down" ? "text-red-500" : "text-gray-400"}`}>
@@ -105,14 +105,14 @@ interface IncidentRowProps {
 function IncidentRow({ ticketRef, title, deptName, severity, status, dueDate, onClick }: IncidentRowProps) {
   return (
     <button
-      className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 transition-colors text-left focus:outline-none focus-visible:bg-gray-50"
+      className="w-full flex items-center gap-3 px-5 py-3 hover:bg-gray-50 dark:hover:bg-gray-800 transition-colors text-left focus:outline-none focus-visible:bg-gray-50 dark:focus-visible:bg-gray-800"
       onClick={onClick}
       aria-label={`View incident ${ticketRef ?? title}`}
     >
       <TicketRef value={ticketRef} />
       <div className="flex-1 min-w-0">
-        <p className="text-sm text-gray-900 truncate font-medium">{title}</p>
-        {deptName && <p className="text-xs text-gray-400 truncate mt-0.5">{deptName}</p>}
+        <p className="text-sm text-gray-900 dark:text-gray-100 truncate font-medium">{title}</p>
+        {deptName && <p className="text-xs text-gray-400 dark:text-gray-500 truncate mt-0.5">{deptName}</p>}
       </div>
       <SeverityBadge severity={severity} />
       <StatusBadge status={status} />
@@ -194,13 +194,13 @@ export function DashboardPage() {
       {/* Header */}
       <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 tracking-tight">
+          <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100 tracking-tight">
             {getGreeting(user?.cr4c3_fullname ?? "there")}
           </h2>
-          <p className="text-sm text-gray-500 mt-0.5">
+          <p className="text-sm text-gray-500 dark:text-gray-400 mt-0.5">
             {loadingIncidents ? "Loading…" : (
               <>
-                <span className="font-semibold text-gray-700">{activeCount}</span>{" "}
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{activeCount}</span>{" "}
                 active incident{activeCount !== 1 ? "s" : ""} need attention
               </>
             )}
@@ -228,15 +228,15 @@ export function DashboardPage() {
         <SkeletonCards count={4} />
       ) : (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-          <MetricCard label="Active Incidents" value={activeCount} icon={AlertCircle} color="text-blue-600" bgColor="bg-blue-50" onClick={() => navigate("/incidents")} />
-          <MetricCard label="Critical" value={criticalCount} icon={AlertTriangle} color="text-red-600" bgColor="bg-red-50" pulse={criticalCount > 0} onClick={() => navigate("/incidents")} />
-          <MetricCard label="Overdue" value={overdueCount} icon={Clock} color="text-amber-600" bgColor="bg-amber-50" pulse={overdueCount > 0} />
+          <MetricCard label="Active Incidents" value={activeCount} icon={AlertCircle} color="text-blue-600 dark:text-blue-400" bgColor="bg-blue-50 dark:bg-blue-950" onClick={() => navigate("/incidents")} />
+          <MetricCard label="Critical" value={criticalCount} icon={AlertTriangle} color="text-red-600 dark:text-red-400" bgColor="bg-red-50 dark:bg-red-950" pulse={criticalCount > 0} onClick={() => navigate("/incidents")} />
+          <MetricCard label="Overdue" value={overdueCount} icon={Clock} color="text-amber-600 dark:text-amber-400" bgColor="bg-amber-50 dark:bg-amber-950" pulse={overdueCount > 0} />
           <MetricCard
             label="Resolved This Week"
             value={resolvedThisWeek}
             icon={CheckCircle}
-            color="text-green-600"
-            bgColor="bg-green-50"
+            color="text-green-600 dark:text-green-400"
+            bgColor="bg-green-50 dark:bg-green-950"
             trend={resolvedTrend}
             trendLabel={
               resolvedTrend === "flat"
@@ -256,11 +256,11 @@ export function DashboardPage() {
           {/* Needs Attention */}
           <motion.div variants={itemVariants}>
             <GlassCard>
-              <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100">
+              <div className="flex items-center gap-2 px-5 py-4 border-b border-gray-100 dark:border-gray-800">
                 <AlertTriangle className="w-4 h-4 text-red-500" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-gray-900">Needs Attention</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Needs Attention</h3>
                 {needsAttention.length > 0 && (
-                  <span className="ml-auto text-xs font-medium text-red-600 bg-red-50 border border-red-200 rounded-full px-2 py-0.5">
+                  <span className="ml-auto text-xs font-medium text-red-600 dark:text-red-400 bg-red-50 dark:bg-red-950 border border-red-200 dark:border-red-800 rounded-full px-2 py-0.5">
                     {needsAttention.length}
                   </span>
                 )}
@@ -273,7 +273,7 @@ export function DashboardPage() {
                   All clear — no critical or overdue incidents.
                 </div>
               ) : (
-                <div className="divide-y divide-gray-100" role="list" aria-label="Incidents needing attention">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800" role="list" aria-label="Incidents needing attention">
                   {needsAttention.map((inc) => (
                     <div key={inc.cr4c3_incidentid} role="listitem">
                       <IncidentRow
@@ -295,8 +295,8 @@ export function DashboardPage() {
           {/* Recent Incidents */}
           <motion.div variants={itemVariants}>
             <GlassCard>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100">
-                <h3 className="text-sm font-semibold text-gray-900">Recent Incidents</h3>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-100 dark:border-gray-800">
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Recent Incidents</h3>
                 <Button variant="ghost" size="sm" onClick={() => navigate("/incidents")}>
                   View all <ArrowRight className="w-3 h-3 ml-1" aria-hidden="true" />
                 </Button>
@@ -306,7 +306,7 @@ export function DashboardPage() {
               ) : recentIncidents.length === 0 ? (
                 <div className="py-10 text-center text-gray-400 text-sm">No incidents yet.</div>
               ) : (
-                <div className="divide-y divide-gray-100" role="list" aria-label="Recent incidents">
+                <div className="divide-y divide-gray-100 dark:divide-gray-800" role="list" aria-label="Recent incidents">
                   {recentIncidents.map((inc) => (
                     <div key={inc.cr4c3_incidentid} role="listitem">
                       <IncidentRow
@@ -333,7 +333,7 @@ export function DashboardPage() {
             <GlassCard className="p-5">
               <div className="flex items-center gap-2 mb-4">
                 <ShieldCheck className="w-4 h-4 text-primary" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-gray-900">Preventive Actions</h3>
+                <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100">Preventive Actions</h3>
               </div>
               {loadingPAs ? (
                 <div className="flex justify-center py-4">
@@ -342,12 +342,12 @@ export function DashboardPage() {
               ) : (
                 <div className="flex flex-col items-center gap-3">
                   <CircularProgress value={paProgressPct} size={96} strokeWidth={8}>
-                    <p className="text-xl font-bold text-gray-900 leading-none">{paProgressPct}%</p>
+                    <p className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-none">{paProgressPct}%</p>
                   </CircularProgress>
-                  <p className="text-sm text-gray-500">
-                    <span className="font-semibold text-gray-800">{completedPAs}</span>
-                    <span className="text-gray-400"> / </span>
-                    <span className="font-semibold text-gray-800">{totalPAs}</span>
+                  <p className="text-sm text-gray-500 dark:text-gray-400">
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{completedPAs}</span>
+                    <span className="text-gray-400 dark:text-gray-500"> / </span>
+                    <span className="font-semibold text-gray-800 dark:text-gray-200">{totalPAs}</span>
                     {" "}completed
                   </p>
                 </div>
@@ -358,7 +358,7 @@ export function DashboardPage() {
           {/* By Department */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-4">By Department</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-4">By Department</h3>
               {loadingIncidents ? (
                 <div className="space-y-3" aria-busy="true">
                   {[1, 2, 3, 4].map((i) => (
@@ -379,7 +379,7 @@ export function DashboardPage() {
           {/* Quick Actions */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-gray-900 mb-3">Quick Actions</h3>
+              <h3 className="text-sm font-semibold text-gray-900 dark:text-gray-100 mb-3">Quick Actions</h3>
               <nav className="space-y-1" aria-label="Quick actions">
                 {[
                   { label: "Log Incident", icon: FilePlus, href: "/log-incident" },
@@ -390,9 +390,9 @@ export function DashboardPage() {
                   <button
                     key={href}
                     onClick={() => navigate(href)}
-                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 hover:bg-gray-50 hover:text-primary transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
+                    className="w-full flex items-center gap-3 px-3 py-2.5 rounded-lg text-sm text-gray-700 dark:text-gray-300 hover:bg-gray-50 dark:hover:bg-gray-800 hover:text-primary transition-colors group focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50"
                   >
-                    <Icon className="w-4 h-4 text-gray-400 group-hover:text-primary transition-colors flex-shrink-0" aria-hidden="true" />
+                    <Icon className="w-4 h-4 text-gray-400 dark:text-gray-500 group-hover:text-primary transition-colors flex-shrink-0" aria-hidden="true" />
                     {label}
                     <ArrowRight className="w-3 h-3 ml-auto text-gray-300 group-hover:text-primary transition-colors" aria-hidden="true" />
                   </button>

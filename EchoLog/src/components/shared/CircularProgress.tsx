@@ -37,7 +37,7 @@ export function CircularProgress({
           fill="none"
           stroke="currentColor"
           strokeWidth={strokeWidth}
-          className="text-gray-100"
+          className="text-gray-100 dark:text-gray-700"
         />
         {/* Progress */}
         <circle

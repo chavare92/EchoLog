@@ -73,7 +73,7 @@ export function NotificationsPage() {
           {unread.length > 0 && (
             <div className="space-y-2">
               <div className="flex items-center gap-2">
-                <h3 className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Unread</h3>
+                <h3 className="text-xs font-semibold text-gray-500 dark:text-gray-400 uppercase tracking-wide">Unread</h3>
                 <Badge variant="default" className="text-xs px-1.5 py-0">{unread.length}</Badge>
               </div>
               {unread.map((n) => (
@@ -95,7 +95,7 @@ export function NotificationsPage() {
                             {formatDateTime(n.cr4c3_createdat)}
                           </span>
                         </div>
-                        <p className="text-sm text-gray-900 mt-1.5">{n.cr4c3_message}</p>
+                        <p className="text-sm text-gray-900 dark:text-gray-100 mt-1.5">{n.cr4c3_message}</p>
                       </div>
                     </div>
                   </GlassCard>
@@ -107,7 +107,7 @@ export function NotificationsPage() {
           {/* Read */}
           {read.length > 0 && (
             <div className="space-y-2">
-              <h3 className="text-xs font-semibold text-gray-400 uppercase tracking-wide">Read</h3>
+              <h3 className="text-xs font-semibold text-gray-400 dark:text-gray-500 uppercase tracking-wide">Read</h3>
               {read.map((n) => (
                 <motion.div key={n.cr4c3_notificationid} variants={itemVariants}>
                   <GlassCard className="p-4 opacity-60">

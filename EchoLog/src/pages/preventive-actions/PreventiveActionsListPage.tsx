@@ -81,8 +81,8 @@ export function PreventiveActionsListPage() {
             <ShieldCheck className="w-5 h-5 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900">Preventive Actions</h2>
-            <p className="text-xs text-gray-500">{filtered.length} action{filtered.length !== 1 ? "s" : ""} shown</p>
+            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Preventive Actions</h2>
+            <p className="text-xs text-gray-500 dark:text-gray-400">{filtered.length} action{filtered.length !== 1 ? "s" : ""} shown</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -258,7 +258,7 @@ export function PreventiveActionsListPage() {
               <div key={status} className="space-y-3" role="region" aria-label={`${label} column`}>
                 <div className={`rounded-xl border-t-4 bg-white/80 backdrop-blur-sm border border-gray-200 p-3 ${color}`}>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-800">{label}</h3>
+                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{label}</h3>
                     <Badge variant="secondary" className="text-xs">{colItems.length}</Badge>
                   </div>
                 </div>
@@ -272,7 +272,7 @@ export function PreventiveActionsListPage() {
                         className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${over ? "border-l-4 border-l-red-400" : ""}`}
                         onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}
                       >
-                        <p className="text-sm font-medium text-gray-900 line-clamp-2">{pa.cr4c3_title}</p>
+                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{pa.cr4c3_title}</p>
                         <div className="flex items-center justify-between mt-2">
                           <TicketRef value={getIncidentRef(pa._cr4c3_incident_value)} />
                           {pa.cr4c3_duedate && (

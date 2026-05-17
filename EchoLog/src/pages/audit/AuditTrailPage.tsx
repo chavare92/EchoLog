@@ -100,11 +100,11 @@ export function AuditTrailPage() {
             <GitBranch className="w-6 h-6 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900">Audit Trail</h2>
-            <p className="text-sm text-gray-500 mt-1">
+            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Audit Trail</h2>
+            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
               Complete activity log of all system events.{" "}
               {!isLoading && (
-                <span className="font-semibold text-gray-700">{allLogs?.length ?? 0}</span>
+                <span className="font-semibold text-gray-700 dark:text-gray-300">{allLogs?.length ?? 0}</span>
               )}{" "}
               {!isLoading && "events recorded."}
             </p>
@@ -170,9 +170,9 @@ export function AuditTrailPage() {
               {/* Date header */}
               <div className="flex items-center gap-3 mb-4" aria-label={`Events on ${dateLabel}`}>
                 <div className="w-3 h-3 rounded-full bg-primary border-2 border-white shadow-sm" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-gray-700">{dateLabel}</h3>
-                <div className="flex-1 border-t border-gray-200" aria-hidden="true" />
-                <span className="text-xs text-gray-400 bg-gray-100 rounded-full px-2 py-0.5">{logs.length}</span>
+                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{dateLabel}</h3>
+                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" aria-hidden="true" />
+                <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5">{logs.length}</span>
               </div>
 
               {/* Events */}
@@ -204,11 +204,11 @@ export function AuditTrailPage() {
                               : "—"}
                           </time>
                         </div>
-                        <p className="text-sm text-gray-800 mt-2">{log.cr4c3_description}</p>
+                        <p className="text-sm text-gray-800 dark:text-gray-200 mt-2">{log.cr4c3_description}</p>
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
-                          <span className="text-xs text-gray-500">
-                            <span className="font-medium text-gray-700">{actorName}</span>
-                            {log.cr4c3_actorrole && <span className="ml-1 text-gray-400">· {log.cr4c3_actorrole}</span>}
+                          <span className="text-xs text-gray-500 dark:text-gray-400">
+                            <span className="font-medium text-gray-700 dark:text-gray-300">{actorName}</span>
+                            {log.cr4c3_actorrole && <span className="ml-1 text-gray-400 dark:text-gray-500">· {log.cr4c3_actorrole}</span>}
                           </span>
                         </div>
                         {/* Field change pills */}
