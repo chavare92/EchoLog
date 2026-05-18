@@ -16,15 +16,11 @@ interface StatsPillsProps {
 
 /**
  * Reusable horizontal stat pills row.
- * Scrolls horizontally on narrow viewports.
  */
 export function StatsPills({ pills, className }: StatsPillsProps) {
   return (
     <div
-      className={cn(
-        "flex flex-wrap gap-2",
-        className
-      )}
+      className={cn("flex flex-wrap gap-2", className)}
       role="status"
       aria-label="Statistics"
     >
@@ -32,12 +28,13 @@ export function StatsPills({ pills, className }: StatsPillsProps) {
         <span
           key={label}
           className={cn(
-            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap",
+            "inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-xs font-semibold whitespace-nowrap backdrop-blur-sm",
             cls
           )}
         >
           {pulse && <PulseIndicator color={pulseColor ?? "red"} />}
-          {label}: {count}
+          <span className="text-[10px] font-medium opacity-80">{label}</span>
+          <span className="font-bold tabular-nums">{count}</span>
         </span>
       ))}
     </div>

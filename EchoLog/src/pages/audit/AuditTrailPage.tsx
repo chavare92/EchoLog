@@ -57,6 +57,8 @@ export function AuditTrailPage() {
   const [search, setSearch] = useState("");
   const [entityFilter, setEntityFilter] = useState<string>("all");
   const [actionFilter, setActionFilter] = useState<string>("all");
+  const [dateFrom, setDateFrom] = useState<string>("");
+  const [dateTo, setDateTo] = useState<string>("");
   // Map of auditlogid → true if integrity check failed
   const [integrityWarnings, setIntegrityWarnings] = useState<Record<string, boolean>>({});
 
@@ -103,9 +105,12 @@ export function AuditTrailPage() {
         log.cr4c3_fieldchanged?.toLowerCase().includes(q);
       const matchEntity = entityFilter === "all" || log.cr4c3_entitytype === entityFilter;
       const matchAction = actionFilter === "all" || log.cr4c3_action === Number(actionFilter);
-      return matchSearch && matchEntity && matchAction;
+      const logTs = log.cr4c3_timestamp ? new Date(log.cr4c3_timestamp) : null;
+      const matchFrom = !dateFrom || (logTs && logTs >= new Date(dateFrom));
+      const matchTo = !dateTo || (logTs && logTs <= new Date(dateTo + "T23:59:59"));
+      return matchSearch && matchEntity && matchAction && matchFrom && matchTo;
     });
-  }, [allLogs, search, entityFilter, actionFilter]);
+  }, [allLogs, search, entityFilter, actionFilter, dateFrom, dateTo]);
 
   const grouped = useMemo(() => groupByDate(filtered), [filtered]);
 
@@ -129,11 +134,11 @@ export function AuditTrailPage() {
             <GitBranch className="w-6 h-6 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-2xl font-bold text-gray-900 dark:text-gray-100">Audit Trail</h2>
-            <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">
+            <h2 className="text-2xl font-bold text-[hsl(var(--foreground))]">Audit Trail</h2>
+            <p className="text-sm text-[hsl(var(--foreground-muted))] mt-1">
               Complete activity log of all system events.{" "}
               {!isLoading && (
-                <span className="font-semibold text-gray-700 dark:text-gray-300">{allLogs?.length ?? 0}</span>
+                <span className="font-semibold text-[hsl(var(--foreground))]">{allLogs?.length ?? 0}</span>
               )}{" "}
               {!isLoading && "events recorded."}
             </p>
@@ -177,6 +182,12 @@ export function AuditTrailPage() {
                 ))}
               </SelectContent>
             </Select>
+            <input type="date" value={dateFrom} onChange={(e) => setDateFrom(e.target.value)}
+              aria-label="From date"
+              className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" />
+            <input type="date" value={dateTo} onChange={(e) => setDateTo(e.target.value)}
+              aria-label="To date"
+              className="h-9 rounded-md border border-input bg-transparent px-3 py-1 text-sm shadow-sm focus:outline-none focus:ring-1 focus:ring-ring" />
           </div>
         </GlassCard>
       </motion.div>
@@ -199,9 +210,9 @@ export function AuditTrailPage() {
               {/* Date header */}
               <div className="flex items-center gap-3 mb-4" aria-label={`Events on ${dateLabel}`}>
                 <div className="w-3 h-3 rounded-full bg-primary border-2 border-white shadow-sm" aria-hidden="true" />
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">{dateLabel}</h3>
-                <div className="flex-1 border-t border-gray-200 dark:border-gray-700" aria-hidden="true" />
-                <span className="text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 rounded-full px-2 py-0.5">{logs.length}</span>
+                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{dateLabel}</h3>
+                <div className="flex-1 border-t border-[hsl(var(--border))]" aria-hidden="true" />
+                <span className="text-xs text-[hsl(var(--foreground-muted))] bg-[hsl(var(--background))] rounded-full px-2 py-0.5">{logs.length}</span>
               </div>
 
               {/* Events */}
@@ -240,11 +251,11 @@ export function AuditTrailPage() {
                               : "—"}
                           </time>
                         </div>
-                        <p className="text-sm text-gray-800 dark:text-gray-200 mt-2">{log.cr4c3_description}</p>
+                        <p className="text-sm text-[hsl(var(--foreground))] mt-2">{log.cr4c3_description}</p>
                         <div className="flex items-center gap-3 mt-2 flex-wrap">
-                          <span className="text-xs text-gray-500 dark:text-gray-400">
-                            <span className="font-medium text-gray-700 dark:text-gray-300">{actorName}</span>
-                            {log.cr4c3_actorrole && <span className="ml-1 text-gray-400 dark:text-gray-500">· {log.cr4c3_actorrole}</span>}
+                          <span className="text-xs text-[hsl(var(--foreground-muted))]">
+                            <span className="font-medium text-[hsl(var(--foreground))]">{actorName}</span>
+                            {log.cr4c3_actorrole && <span className="ml-1 text-[hsl(var(--foreground-muted))]">· {log.cr4c3_actorrole}</span>}
                           </span>
                         </div>
                         {/* Field change pills */}

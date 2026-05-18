@@ -1,8 +1,20 @@
 # EchoLog — Product Requirements Document
 
-**Version:** 1.0  
-**Date:** May 17, 2026  
+**Version:** 1.1  
+**Date:** May 18, 2026  
+**Previous Version:** 1.0 (May 17, 2026)  
 **Type:** Power Apps Code App (React + Microsoft Dataverse)
+
+### What changed in v1.1
+
+| Area | Change |
+|---|---|
+| Tech stack | Upgraded to React 19.2, Tailwind CSS 4.3, Framer Motion 12.38, Jotai 2.20, Sonner 2.0.7 |
+| UI Design System | Full 9-phase UI modernisation: CSS variable token system, gradient components, shimmer skeletons, spring animations, dark mode |
+| PA Creation guard | `canCreatePA` now includes L1/L2 Managers; allowed from both `RCAApproved` and `PAClosed` status |
+| Progress bar | `RCARejected` status maps to `RCAInReview` index for progress display (was showing 0%) |
+| Reassign PA | New: Admins and Managers can reassign a PA's owner directly from PADetailPage |
+| Delegations table | `cr4c3_delegations` added to data model |
 
 ---
 
@@ -179,11 +191,12 @@ PAs are created only after the linked RCA reaches **Approved** status. Evidence 
 |---|---|
 | Inline title edit | Click-to-edit when PA is not Completed; saves via `useUpdatePA()` |
 | Inline description edit | Toggle edit button; expandable textarea |
-| File evidence | Hidden `<input type="file">` accept `.pdf,.doc,.docx,.xls,.xlsx,.jpg,.png`; Location Picker dialog (OneDrive / SharePoint); stores metadata in `cr4c3_paevidences` |
+| File evidence | `<input type="file">` accept `.pdf,.doc,.docx,.xls,.xlsx,.jpg,.png`; Location Picker dialog (OneDrive / SharePoint); stores metadata in `cr4c3_paevidences` |
 | Evidence grid | Files from `usePAEvidences(paId)` |
 | Activity timeline | `useAuditLogs(undefined, paId)` — same pattern as Incident Detail |
-| Status sidebar | Status dropdown, Assignee, Due Date picker, Parent Issue link, Created/Completed dates |
+| Status sidebar | Status dropdown, Owner display, Due Date picker, Parent Issue link, Created/Completed dates |
 | Mark as Done | Green CTA button, only visible when status ≠ Completed |
+| **Reassign PA** | "Reassign" button beside Owner field (Admin / L1Manager / L2Manager only); opens dialog with full user list picker; calls `updatePA.mutateAsync({ _cr4c3_paowner_value })` and writes audit log entry with old/new owner names |
 
 ### 6.8 Review Queue
 
@@ -284,18 +297,34 @@ All tables use the `cr4c3_` publisher prefix in Microsoft Dataverse.
 | Layer | Technology |
 |---|---|
 | Runtime | Power Apps Code App (hosted in Power Apps player) |
-| Frontend framework | React 18, TypeScript, Vite |
-| Global state | Jotai atoms (`authAtom`, `themeAtom`, `uiAtoms`) |
+| Frontend framework | React 19.2, TypeScript 5, Vite 6 |
+| Global state | Jotai 2.20 atoms (`authAtom`, `themeAtom`, `uiAtoms`) |
 | Server state / caching | TanStack Query v5 (one hook file per Dataverse table) |
-| UI components | Tailwind CSS + shadcn/ui (Radix UI primitives) + Lucide icons |
-| Toasts | Sonner |
+| UI components | Tailwind CSS 4.3 (CSS variable token system) + shadcn/ui (Radix UI) + Lucide icons |
+| Toasts | Sonner 2.0.7 |
 | Forms | React Hook Form + Zod validation |
-| Animations | Framer Motion (stagger, presence) |
+| Animations | Framer Motion 12.38 (spring physics, stagger, presence) |
+| Router | React Router v7 (lazy-loaded pages) |
 | Data access | `@microsoft/power-apps` SDK auto-generated services in `src/generated/` |
 | Toolchain | Power Platform CLI (`pac`) |
 | Build | `npm run build` → `pac code push` |
 
-### 8.1 Key Frontend Patterns
+### 8.1 UI Design System (v1.1)
+
+All component colors use CSS custom properties defined in `src/index.css` (never hardcoded Tailwind `gray-*` classes):
+
+| Token category | Examples |
+|---|---|
+| Color tokens | `--foreground`, `--foreground-muted`, `--background`, `--background-card`, `--border`, `--primary` |
+| Brand / accent | `--accent` (violet), amber primary (#f59e0b) |
+| Shadow scale | `--shadow-xs` → `--shadow-xl`, `--shadow-amber`, `--shadow-violet` |
+| Radius scale | `--radius-sm` → `--radius-2xl` |
+| Keyframes | `shimmer`, `bell-ring`, `pulse-ring`, `fade-up` |
+| Utility classes | `.surface-elevated`, `.gradient-primary`, `.shimmer`, `.glow-amber`, `.glow-violet`, `.status-dot` |
+
+Tailwind v4 uses `@import "tailwindcss"` syntax. No `tailwind.config.ts`. Dark mode via `.dark` class on `<html>`.
+
+### 8.2 Key Frontend Patterns
 
 - **Auth**: `AuthProvider` + `ProtectedRoute`; `useRoleGuard()` for per-action enforcement.
 - **Data hooks**: One file per table (e.g. `useIncidents()`, `useRCASubmissions()`), wrapping TanStack Query `useQuery` / `useMutation`.
@@ -335,9 +364,33 @@ All tables use the `cr4c3_` publisher prefix in Microsoft Dataverse.
 
 ## 11. Future Enhancements
 
-1. **MS Graph file upload** — real OneDrive/SharePoint storage for PA evidence files.
-2. **Server-side pagination** — `IGetAllOptions.top` + `skipToken` for audit trail and incidents list.
-3. **RCA rejection counter field** — denormalise rejection count onto `cr4c3_rcasubmissions` to avoid runtime audit-log joins.
-4. **Email notifications** — Power Automate flows triggered on status changes.
-5. **PA Calendar picker** — `src/components/ui/calendar.tsx` (currently falls back to `<input type="date">`).
-6. **Report export** — CSV/Excel export for incidents and audit trail.
+### Near-Term (Next 1–2 Sprints)
+
+1. **MS Graph file upload** — replace URL-only PA evidence with real binary upload to OneDrive/SharePoint via Microsoft Graph API (`PUT /me/drive/root:/{filename}:/content`). Store the returned `webUrl` + `driveItemId` in `cr4c3_paevidences`.
+2. **PA Calendar date picker** — replace `<input type="date">` with the shadcn/ui `<Calendar>` component (`src/components/ui/calendar.tsx`) for month navigation and min-date enforcement.
+3. **Server-side pagination** — implement `IGetAllOptions.top` + `skipToken` cursor pagination on the Incidents list and Audit Trail. Add a `usePaginatedIncidents()` hook variant.
+4. **Incident list URL-persisted filters** — persist search, severity, status, page, and sort in URL query params so list state survives navigation and can be deep-linked.
+5. **Dark mode user preference persistence** — save `themeAtom` value to `cr4c3_userprofiles.cr4c3_theme` on toggle so it survives page refresh.
+
+### Medium-Term (Next Quarter)
+
+6. **Email & Teams notifications via Power Automate** — Power Automate flows triggered by Dataverse record status changes to send Teams adaptive cards and Outlook emails per the Notification Trigger Matrix. Channels configurable per-user in profile settings.
+7. **RCA PDF export via jsPDF** — generate a formatted PDF (cover page, effect statement, fishbone diagram rendered as canvas, timeline, action items) instead of relying on `window.print()`.
+8. **Fishbone diagram visualisation** — render the Ishikawa diagram as an interactive SVG using D3 or lightweight canvas. Currently displayed as a categorised list only.
+9. **Drag-and-drop Kanban** — make PA board cards draggable across status columns using `@dnd-kit/core`. Dropping transitions status and creates an audit log entry.
+10. **Duplicate detection improvements** — replace client-side Levenshtein comparison with an OData `$filter` server-side query to reduce false positives without loading all incidents.
+11. **Bulk reassign PAs** — extend multi-select in PreventiveActionsListPage to include a Bulk Reassign action (new owner dropdown applied to all selected PAs). Admin only.
+12. **SLA reset audit trail** — when an Admin resets `cr4c3_slaresetat`, create a dedicated audit entry with old and new effective due dates.
+
+### Long-Term / Strategic
+
+13. **Mobile-responsive layout** — bottom navigation bar on viewport < 768px; single-column scrollable incident detail.
+14. **Multi-language support (i18n)** — integrate `i18next` with JSON locale files; all static strings extracted to locale keys; dates via existing `Intl.DateTimeFormat`.
+15. **Playwright E2E test suite** — automate the full critical path: Login → Log Incident → Submit RCA → L1 Review → L2 Approve → Create PA → Complete PA. Run in CI on every push to `main`.
+16. **Power Automate escalation daemon** — replace client-side `setInterval` escalation check with a scheduled Power Automate flow running every 15 minutes, eliminating dependency on an open browser session.
+17. **Analytics dashboard (Power BI embed)** — embed a Power BI report in the Dashboard tab showing historical incident trends, MTTR by department, severity heatmap, and PA completion rates over time.
+18. **Dataverse row-level security** — configure Dataverse column security profiles and Business Unit hierarchy to enforce data isolation at the storage layer (not just client-side).
+19. **Offline / PWA mode** — service worker caching for read-only offline browsing; queue write operations and sync on reconnect using TanStack Query's `pauseWhenOffline` option.
+20. **Evidence version history** — soft-delete (`cr4c3_isdeleted = true`) when a file is replaced; "Show history" toggle in the evidence grid to reveal superseded versions with a `Superseded` badge.
+21. **RCA rejection counter field** — denormalise rejection count onto `cr4c3_rcasubmissions` to avoid runtime audit-log joins.
+22. **Vitest unit test suite** — 100% coverage on `src/lib/` utilities and `stateMachine.ts` guard conditions; all hooks tested with MSW mock of the Dataverse service layer.

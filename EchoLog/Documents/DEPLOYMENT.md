@@ -26,12 +26,13 @@ This guide covers **promoting EchoLog across environments** (DEV → UAT → PRO
 
 | Tool | Version | Notes |
 |---|---|---|
-| Node.js | 20 LTS+ | `node --version` |
-| npm | 9+ | bundled with Node |
+| Node.js | 20 LTS+ | `node --version`; install with `--legacy-peer-deps` if React 19.2 peer-dependency warnings appear |
+| npm | 10+ | bundled with Node 20 |
 | Power Platform CLI | latest | `pac install latest` |
 | Power Apps environment | — | Must be Dataverse-enabled (not Teams-only) |
 | Publisher prefix | `cr4c3` | Must match everywhere — changing it requires regenerating all tables and code |
 | Git | any | To check out the correct release tag/commit |
+| Tailwind CSS | 4.3 | No `tailwind.config.ts` used; styling configured via CSS custom properties in `src/index.css` using `@import "tailwindcss"` syntax |
 
 ---
 
@@ -240,6 +241,7 @@ After the first push to a new environment, Power Apps creates a Dataverse connec
 | 13 | Notifications | Items filtered to last 30 days |
 | 14 | Print / export RCA | `@media print` layout renders correctly |
 | 15 | Go offline (disable network) | Amber "You are offline" banner appears |
+| 16 | PA Detail → Reassign button | Reassign dialog opens; saving updates owner field; audit log entry created with old/new owner names |
 
 ---
 
@@ -301,3 +303,5 @@ Power Apps also retains app version history — accessible via **Solutions → A
 | `pac code sync` shows no `cr4c3_delegations` | Table not yet added to target | Add the table in Dataverse then re-run `pac code sync` |
 | Login loop / redirect to login on every page | No `cr4c3_userprofiles` record with `cr4c3_isactive = true` | Seed at least one active Admin user (Step 2) |
 | Audit integrity warnings on new records | `cr4c3_checksum` column missing from `cr4c3_auditlogs` | Add `cr4c3_checksum` (Single line of text, 64 chars) to the table |
+| Tailwind styles missing or broken after build | Using v3 Tailwind config | Ensure no `tailwind.config.ts` file exists in the project root; `src/index.css` must start with `@import "tailwindcss"` (Tailwind v4 syntax) |
+| `npm install` peer-dependency warnings about React | React 19.2 not yet declared as a peer by some shadcn/Radix packages | Run `npm install --legacy-peer-deps`; app functions correctly at runtime |

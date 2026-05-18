@@ -82,10 +82,10 @@ export function Sidebar() {
 
   const linkClass = ({ isActive }: { isActive: boolean }) =>
     cn(
-      "group flex items-center rounded-lg px-3 py-2.5 text-sm font-medium transition-all touch-target relative",
+      "group flex items-center rounded-lg px-3 py-2 text-sm font-medium transition-all touch-target relative",
       isCollapsed ? "justify-center px-2" : "gap-3",
       isActive
-        ? "bg-[hsl(var(--sidebar-active-bg))] text-[hsl(var(--sidebar-active-text))] border border-[hsl(var(--sidebar-active-border))]"
+        ? "bg-[hsl(var(--sidebar-active-bg))] text-[hsl(var(--sidebar-active-text))] border-l-[3px] border-[hsl(var(--sidebar-active-border))] pl-[calc(0.75rem-3px)] shadow-sm"
         : "text-[hsl(var(--sidebar-foreground))] hover:bg-[hsl(var(--sidebar-hover-bg))] hover:text-[hsl(var(--foreground))] border border-transparent"
     );
 
@@ -143,16 +143,16 @@ export function Sidebar() {
       <div className={cn("flex items-center mb-4 px-1", isCollapsed ? "justify-center" : "justify-between")}>
         <button
           onClick={() => { navigate("/"); handleNavClick(); }}
-          className={cn("flex items-center gap-2.5 py-2 rounded-lg transition-colors hover:opacity-80", isCollapsed && "justify-center")}
+          className={cn("flex items-center gap-2.5 py-1.5 rounded-lg transition-colors hover:opacity-80", isCollapsed && "justify-center")}
           aria-label="Go to dashboard"
         >
-          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-amber-50 dark:bg-amber-950/50 border border-amber-200 dark:border-amber-800 flex-shrink-0">
-            <Zap className="w-4 h-4 text-amber-600 dark:text-amber-400" aria-hidden="true" />
+          <div className="flex items-center justify-center w-8 h-8 rounded-lg bg-gradient-to-br from-amber-400 to-amber-600 shadow-sm shadow-amber-500/30 flex-shrink-0">
+            <Zap className="w-4 h-4 text-white" aria-hidden="true" />
           </div>
           {!isCollapsed && (
             <div>
-              <span className="font-bold text-gray-900 dark:text-gray-100 text-sm tracking-tight">ECHO LOG</span>
-              <p className="text-[10px] text-gray-400 dark:text-gray-500 leading-none mt-0.5">v1.4</p>
+              <span className="font-black text-[hsl(var(--foreground))] text-sm tracking-tight leading-none">ECHO LOG</span>
+              <p className="text-[10px] text-[hsl(var(--foreground-muted))] leading-none mt-0.5">v1.4</p>
             </div>
           )}
         </button>
@@ -162,7 +162,7 @@ export function Sidebar() {
           <button
             onClick={() => setSidebarCollapsed(!sidebarCollapsed)}
             className={cn(
-              "p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors",
+              "p-1.5 rounded-md text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--sidebar-hover-bg))] transition-colors",
               isCollapsed && "hidden"
             )}
             aria-label={sidebarCollapsed ? "Expand sidebar" : "Collapse sidebar"}
@@ -178,7 +178,7 @@ export function Sidebar() {
         {isMobile && (
           <button
             onClick={() => setMobileSidebarOpen(false)}
-            className="p-1.5 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors"
+            className="p-1.5 rounded-md text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--sidebar-hover-bg))] transition-colors"
             aria-label="Close navigation"
           >
             <X className="w-4 h-4" />
@@ -215,8 +215,8 @@ export function Sidebar() {
               {isCollapsed ? (
                 <div className="border-t border-[hsl(var(--sidebar-border))]" />
               ) : (
-                <p className="text-[10px] uppercase tracking-widest text-gray-400 dark:text-gray-500 font-semibold">
-                  Admin
+                <p className="text-[10px] uppercase tracking-widest text-[hsl(var(--foreground-muted))] font-bold">
+                  Administration
                 </p>
               )}
             </div>
@@ -229,7 +229,7 @@ export function Sidebar() {
       {isCollapsed && !isMobile && (
         <button
           onClick={() => setSidebarCollapsed(false)}
-          className="p-2 rounded-md text-gray-400 hover:text-gray-600 dark:hover:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-800 transition-colors flex items-center justify-center"
+          className="p-2 rounded-md text-[hsl(var(--foreground-muted))] hover:text-[hsl(var(--foreground))] hover:bg-[hsl(var(--sidebar-hover-bg))] transition-colors flex items-center justify-center"
           aria-label="Expand sidebar"
         >
           <PanelLeftOpen className="w-4 h-4" />

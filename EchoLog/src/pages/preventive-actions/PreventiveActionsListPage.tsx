@@ -1,7 +1,7 @@
 import { useState, useMemo } from "react";
 import { useNavigate } from "react-router-dom";
 import { motion } from "framer-motion";
-import { Search, ShieldCheck, LayoutList, LayoutGrid, ArrowRight, Download, RefreshCw } from "lucide-react";
+import { Search, ShieldCheck, LayoutList, LayoutGrid, ArrowRight, Download, RefreshCw, ChevronDown, ChevronRight as ChevronRightIcon } from "lucide-react";
 import { usePreventiveActions, useUpdatePA } from "@/hooks/usePreventiveActions";
 import { useIncidents } from "@/hooks/useIncidents";
 import { PA_STATUS } from "@/lib/constants";
@@ -36,8 +36,10 @@ export function PreventiveActionsListPage() {
   const [viewMode, setViewMode] = useState<ViewMode>("list");
   const [search, setSearch] = useState("");
   const [statusFilter, setStatusFilter] = useState<string>("all");
+  const [incidentFilter, setIncidentFilter] = useState<string>("all");
   const [selectedIds, setSelectedIds] = useState<Set<string>>(new Set());
   const [bulkLoading, setBulkLoading] = useState(false);
+  const [collapsedGroups, setCollapsedGroups] = useState<Set<string>>(new Set());
 
   const getIncident = (incidentId?: string) => incidents?.find((i) => i.cr4c3_incidentid === incidentId);
   const getIncidentRef = (incidentId?: string) => getIncident(incidentId)?.cr4c3_ticketreference;
@@ -47,9 +49,10 @@ export function PreventiveActionsListPage() {
       const q = search.toLowerCase();
       const matchSearch = !search || pa.cr4c3_title?.toLowerCase().includes(q) || pa.cr4c3_description?.toLowerCase().includes(q);
       const matchStatus = statusFilter === "all" || pa.cr4c3_status === Number(statusFilter);
-      return matchSearch && matchStatus;
+      const matchIncident = incidentFilter === "all" || pa._cr4c3_incident_value === incidentFilter;
+      return matchSearch && matchStatus && matchIncident;
     });
-  }, [allPAs, search, statusFilter]);
+  }, [allPAs, search, statusFilter, incidentFilter]);
 
   // Stats
   const stats = useMemo(() => ({
@@ -59,20 +62,37 @@ export function PreventiveActionsListPage() {
     overdue: (allPAs ?? []).filter((p) => p.cr4c3_status !== PA_STATUS.Completed && isOverdue(p.cr4c3_duedate)).length,
   }), [allPAs]);
 
+  // Grouped by incident for list view
+  const grouped = useMemo(() => {
+    const map = new Map<string, typeof filtered>();
+    for (const pa of filtered) {
+      const key = pa._cr4c3_incident_value ?? "__none__";
+      if (!map.has(key)) map.set(key, []);
+      map.get(key)!.push(pa);
+    }
+    return Array.from(map.entries());
+  }, [filtered]);
+
+  const toggleGroup = (key: string) =>
+    setCollapsedGroups((prev) => {
+      const next = new Set(prev);
+      next.has(key) ? next.delete(key) : next.add(key);
+      return next;
+    });
+
+  // Unique incidents that have PAs
+  const incidentOptions = useMemo(() => {
+    const ids = [...new Set((allPAs ?? []).map((p) => p._cr4c3_incident_value).filter(Boolean))] as string[];
+    return ids.map((id) => ({ id, ref: getIncidentRef(id) ?? id }));
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [allPAs, incidents]);
+
   const toggleSelect = (id: string) => {
     setSelectedIds((prev) => {
       const next = new Set(prev);
       next.has(id) ? next.delete(id) : next.add(id);
       return next;
     });
-  };
-
-  const toggleSelectAll = () => {
-    if (selectedIds.size === filtered.length) {
-      setSelectedIds(new Set());
-    } else {
-      setSelectedIds(new Set(filtered.map((p) => p.cr4c3_preventiveactionid!)));
-    }
   };
 
   // ── Bulk: Mark In Progress ────────────────────────────────────────────────
@@ -131,8 +151,8 @@ export function PreventiveActionsListPage() {
             <ShieldCheck className="w-5 h-5 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Preventive Actions</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{filtered.length} action{filtered.length !== 1 ? "s" : ""} shown</p>
+            <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Preventive Actions</h2>
+            <p className="text-xs text-[hsl(var(--foreground-muted))]">{filtered.length} action{filtered.length !== 1 ? "s" : ""} shown</p>
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -199,10 +219,21 @@ export function PreventiveActionsListPage() {
                 <SelectItem value={String(PA_STATUS.Completed)}>Done</SelectItem>
               </SelectContent>
             </Select>
+            <Select value={incidentFilter} onValueChange={setIncidentFilter}>
+              <SelectTrigger className="w-48" aria-label="Filter by incident">
+                <SelectValue placeholder="All Incidents" />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="all">All Incidents</SelectItem>
+                {incidentOptions.map(({ id, ref }) => (
+                  <SelectItem key={id} value={id}>{ref}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
           </div>
           {selectedIds.size > 0 && (
             <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-700 flex items-center gap-3 flex-wrap">
-              <span className="text-sm font-medium text-gray-700 dark:text-gray-300">
+              <span className="text-sm font-medium text-[hsl(var(--foreground))]">
                 {selectedIds.size} selected
               </span>
               <Button
@@ -238,91 +269,94 @@ export function PreventiveActionsListPage() {
       {isLoading ? (
         viewMode === "board" ? <div className="grid grid-cols-3 gap-4"><SkeletonCards count={3} /></div> : <GlassCard><div className="p-4"><SkeletonTable rows={8} columns={5} /></div></GlassCard>
       ) : viewMode === "list" ? (
-        /* List view */
-        <motion.div variants={itemVariants}>
-          <GlassCard>
-            {filtered.length === 0 ? (
-              <div className="py-16 text-center">
-                <ShieldCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-gray-500 font-medium">No preventive actions found</p>
-              </div>
-            ) : (
-              <Table>
-                <TableHeader>
-                  <TableRow>
-                    <TableHead className="w-10">
-                      <input
-                        type="checkbox"
-                        checked={selectedIds.size === filtered.length && filtered.length > 0}
-                        onChange={toggleSelectAll}
-                        aria-label="Select all"
-                        className="rounded border-gray-300 accent-primary"
-                      />
-                    </TableHead>
-                    <TableHead>Title</TableHead>
-                    <TableHead>Incident</TableHead>
-                    <TableHead>Status</TableHead>
-                    <TableHead>Due Date</TableHead>
-                    <TableHead className="w-10"><span className="sr-only">Actions</span></TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {filtered.map((pa) => {
-                    const over = pa.cr4c3_status !== PA_STATUS.Completed && isOverdue(pa.cr4c3_duedate);
-                    const selected = selectedIds.has(pa.cr4c3_preventiveactionid!);
-                    return (
-                      <TableRow
-                        key={pa.cr4c3_preventiveactionid}
-                        className={`cursor-pointer transition-colors ${over ? "bg-red-50/60 hover:bg-red-50" : selected ? "bg-blue-50/60 hover:bg-blue-50" : "hover:bg-gray-50"}`}
-                        onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}
-                      >
-                        <TableCell onClick={(e) => { e.stopPropagation(); toggleSelect(pa.cr4c3_preventiveactionid!); }}>
-                          <input
-                            type="checkbox"
-                            checked={selected}
-                            onChange={() => toggleSelect(pa.cr4c3_preventiveactionid!)}
-                            aria-label={`Select ${pa.cr4c3_title}`}
+        /* List view — grouped by incident */
+        <motion.div variants={itemVariants} className="space-y-4">
+          {grouped.length === 0 ? (
+            <GlassCard className="py-16 text-center">
+              <ShieldCheck className="w-10 h-10 text-gray-300 mx-auto mb-3" aria-hidden="true" />
+              <p className="text-gray-500 font-medium">No preventive actions found</p>
+            </GlassCard>
+          ) : grouped.map(([incId, items]) => {
+            const incRef = incId === "__none__" ? "No Incident" : getIncidentRef(incId) ?? incId;
+            const incTitle = incId === "__none__" ? "" : incidents?.find((i) => i.cr4c3_incidentid === incId)?.cr4c3_title ?? "";
+            const collapsed = collapsedGroups.has(incId);
+            return (
+              <GlassCard key={incId}>
+                {/* Group header */}
+                <button
+                  className="w-full flex items-center gap-2 p-4 text-left hover:bg-[hsl(var(--sidebar-hover-bg))]/40 rounded-t-xl transition-colors"
+                  onClick={() => toggleGroup(incId)}
+                  aria-expanded={!collapsed}
+                >
+                  {collapsed ? <ChevronRightIcon className="w-4 h-4 text-gray-400" /> : <ChevronDown className="w-4 h-4 text-gray-400" />}
+                  <span className="text-sm font-semibold text-primary">{incRef}</span>
+                  {incTitle && <span className="text-xs text-gray-500 truncate flex-1">— {incTitle}</span>}
+                  <span className="ml-auto rounded-full bg-gray-100 dark:bg-gray-700 px-2 py-0.5 text-xs text-[hsl(var(--foreground-muted))]">{items.length}</span>
+                </button>
+                {!collapsed && (
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead className="w-10">
+                          <input type="checkbox"
+                            checked={items.every((p) => selectedIds.has(p.cr4c3_preventiveactionid!))}
+                            onChange={() => {
+                              const allSelected = items.every((p) => selectedIds.has(p.cr4c3_preventiveactionid!));
+                              setSelectedIds((prev) => {
+                                const next = new Set(prev);
+                                items.forEach((p) => allSelected ? next.delete(p.cr4c3_preventiveactionid!) : next.add(p.cr4c3_preventiveactionid!));
+                                return next;
+                              });
+                            }}
+                            aria-label="Select group"
                             className="rounded border-gray-300 accent-primary"
-                            onClick={(e) => e.stopPropagation()}
                           />
-                        </TableCell>
-                        <TableCell>
-                          <p className="text-sm font-medium text-gray-900 truncate max-w-xs">{pa.cr4c3_title}</p>
-                          {pa.cr4c3_description && (
-                            <p className="text-xs text-gray-400 truncate max-w-xs mt-0.5">{pa.cr4c3_description}</p>
-                          )}
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <TicketRef value={getIncidentRef(pa._cr4c3_incident_value)} />
-                        </TableCell>
-                        <TableCell><StatusBadge status={pa.cr4c3_status} type="pa" /></TableCell>
-                        <TableCell>
-                          {pa.cr4c3_duedate ? (
-                            <span className={`text-xs ${over ? "text-red-600 font-semibold" : "text-gray-500"}`}>
-                              {over && <PulseIndicator color="red" className="inline mr-1" />}
-                              {formatDate(pa.cr4c3_duedate)}
-                            </span>
-                          ) : (
-                            <span className="text-xs text-gray-400">—</span>
-                          )}
-                        </TableCell>
-                        <TableCell onClick={(e) => e.stopPropagation()}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}
-                            aria-label={`Open ${pa.cr4c3_title}`}
-                          >
-                            <ArrowRight className="w-4 h-4" aria-hidden="true" />
-                          </Button>
-                        </TableCell>
+                        </TableHead>
+                        <TableHead>Title</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Due Date</TableHead>
+                        <TableHead className="w-10"><span className="sr-only">Open</span></TableHead>
                       </TableRow>
-                    );
-                  })}
-                </TableBody>
-              </Table>
-            )}
-          </GlassCard>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((pa) => {
+                        const over = pa.cr4c3_status !== PA_STATUS.Completed && isOverdue(pa.cr4c3_duedate);
+                        const selected = selectedIds.has(pa.cr4c3_preventiveactionid!);
+                        return (
+                          <TableRow key={pa.cr4c3_preventiveactionid}
+                            className={`cursor-pointer transition-colors ${over ? "bg-red-50/60 hover:bg-red-50" : selected ? "bg-blue-50/60 hover:bg-blue-50" : "hover:bg-gray-50"}`}
+                            onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}>
+                            <TableCell onClick={(e) => { e.stopPropagation(); toggleSelect(pa.cr4c3_preventiveactionid!); }}>
+                              <input type="checkbox" checked={selected} onChange={() => toggleSelect(pa.cr4c3_preventiveactionid!)}
+                                aria-label={`Select ${pa.cr4c3_title}`} className="rounded border-gray-300 accent-primary" onClick={(e) => e.stopPropagation()} />
+                            </TableCell>
+                            <TableCell>
+                              <p className="text-sm font-medium text-[hsl(var(--foreground))] truncate max-w-xs">{pa.cr4c3_title}</p>
+                              {pa.cr4c3_description && <p className="text-xs text-gray-400 truncate max-w-xs mt-0.5">{pa.cr4c3_description}</p>}
+                            </TableCell>
+                            <TableCell><StatusBadge status={pa.cr4c3_status} type="pa" /></TableCell>
+                            <TableCell>
+                              {pa.cr4c3_duedate ? (
+                                <span className={`text-xs ${over ? "text-red-600 font-semibold" : "text-gray-500"}`}>
+                                  {over && <PulseIndicator color="red" className="inline mr-1" />}
+                                  {formatDate(pa.cr4c3_duedate)}
+                                </span>
+                              ) : <span className="text-xs text-gray-400">—</span>}
+                            </TableCell>
+                            <TableCell onClick={(e) => e.stopPropagation()}>
+                              <Button variant="ghost" size="sm" onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)} aria-label={`Open ${pa.cr4c3_title}`}>
+                                <ArrowRight className="w-4 h-4" />
+                              </Button>
+                            </TableCell>
+                          </TableRow>
+                        );
+                      })}
+                    </TableBody>
+                  </Table>
+                )}
+              </GlassCard>
+            );
+          })}
         </motion.div>
       ) : (
         /* Board view */
@@ -333,7 +367,7 @@ export function PreventiveActionsListPage() {
               <div key={status} className="space-y-3" role="region" aria-label={`${label} column`}>
                 <div className={`rounded-xl border-t-4 bg-white/80 backdrop-blur-sm border border-gray-200 p-3 ${color}`}>
                   <div className="flex items-center justify-between">
-                    <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">{label}</h3>
+                    <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">{label}</h3>
                     <Badge variant="secondary" className="text-xs">{colItems.length}</Badge>
                   </div>
                 </div>
@@ -347,7 +381,7 @@ export function PreventiveActionsListPage() {
                         className={`p-3 cursor-pointer hover:shadow-md transition-shadow ${over ? "border-l-4 border-l-red-400" : ""}`}
                         onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}
                       >
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100 line-clamp-2">{pa.cr4c3_title}</p>
+                        <p className="text-sm font-medium text-[hsl(var(--foreground))] line-clamp-2">{pa.cr4c3_title}</p>
                         <div className="flex items-center justify-between mt-2">
                           <TicketRef value={getIncidentRef(pa._cr4c3_incident_value)} />
                           {pa.cr4c3_duedate && (

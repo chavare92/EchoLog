@@ -9,6 +9,7 @@ import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { useCreateAuditLog, useAuditLogs } from "@/hooks/useAuditLogs";
 import { useCreateNotification } from "@/hooks/useNotifications";
 import { useSLARules } from "@/hooks/useSLARules";
+import { useRoleGuard } from "@/auth/useRoleGuard";
 import { RCA_STATUS, INCIDENT_STATUS } from "@/lib/constants";
 import { formatDateTime } from "@/lib/utils";
 import { evaluateEscalation, escalationReasonLabel } from "@/lib/escalation";
@@ -36,6 +37,8 @@ const SEVERITY_BORDER: Record<number, string> = {
 
 export function ReviewQueuePage() {
   const user = useAtomValue(currentUserAtom);
+  const { isAdmin, isL1Manager, isL2Manager, canReview } = useRoleGuard();
+
   const { data: allRCAs, isLoading } = useRCASubmissions();
   const { data: incidents } = useIncidents();
   const { data: userProfiles } = useUserProfiles();
@@ -165,8 +168,16 @@ export function ReviewQueuePage() {
     if (!rca) return;
     const inc = getIncident(rca._cr4c3_incident_value ?? "");
 
-    const newStatus = action === "approve" ? RCA_STATUS.Approved : RCA_STATUS.Rejected;
-    const newIncidentStatus = action === "approve" ? INCIDENT_STATUS.RCAApproved : INCIDENT_STATUS.RCARejected;
+    const newStatus = action === "reject"
+      ? RCA_STATUS.Rejected
+      : isL1Manager && !isAdmin && !isL2Manager
+        ? RCA_STATUS.PendingL2Review   // L1 approval sends to L2 queue
+        : RCA_STATUS.Approved;         // L2 / Admin final approval
+    const newIncidentStatus = action === "approve" && newStatus === RCA_STATUS.Approved
+      ? INCIDENT_STATUS.RCAApproved
+      : action === "reject"
+      ? INCIDENT_STATUS.RCARejected
+      : INCIDENT_STATUS.RCAInReview;
 
     await updateRCA.mutateAsync({
       id: selectedRCA,
@@ -215,6 +226,17 @@ export function ReviewQueuePage() {
 
   return (
     <PageWrapper>
+      {/* Role guard */}
+      {!canReview && !isAdmin ? (
+        <motion.div variants={itemVariants}>
+          <GlassCard className="py-20 text-center">
+            <Gavel className="w-12 h-12 text-gray-300 dark:text-gray-600 mx-auto mb-4" />
+            <p className="text-[hsl(var(--foreground-muted))] font-semibold text-lg mb-1">Access Restricted</p>
+            <p className="text-[hsl(var(--foreground-muted))] text-sm">This page is available to L1/L2 Managers and Admins only.</p>
+          </GlassCard>
+        </motion.div>
+      ) : (
+      <>
       {/* Header */}
       <motion.div variants={itemVariants} className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div className="flex items-center gap-2">
@@ -222,23 +244,14 @@ export function ReviewQueuePage() {
             <Gavel className="w-5 h-5 text-primary" aria-hidden="true" />
           </div>
           <div>
-            <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Review Queue</h2>
-            <p className="text-xs text-gray-500 dark:text-gray-400">{pendingRCAs.length} RCA{pendingRCAs.length !== 1 ? "s" : ""} pending review</p>
+            <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Review Queue</h2>
+            <p className="text-xs text-[hsl(var(--foreground-muted))]">{pendingRCAs.length} RCA{pendingRCAs.length !== 1 ? "s" : ""} pending review</p>
           </div>
         </div>
         <div className="flex items-center gap-3">
-          <p className="hidden sm:block text-xs text-gray-400 dark:text-gray-500 bg-gray-100 dark:bg-gray-800 px-2 py-1 rounded font-mono">
-            Focus card → <kbd className="font-semibold">A</kbd> approve · <kbd className="font-semibold">R</kbd> reject
-          </p>
           <div className="relative max-w-xs w-full">
             <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-gray-400" aria-hidden="true" />
-            <Input
-              placeholder="Search RCAs…"
-              className="pl-9"
-              value={search}
-              onChange={(e) => setSearch(e.target.value)}
-              aria-label="Search RCAs"
-            />
+            <Input placeholder="Search RCAs…" className="pl-9" value={search} onChange={(e) => setSearch(e.target.value)} aria-label="Search RCAs" />
           </div>
         </div>
       </motion.div>
@@ -258,7 +271,7 @@ export function ReviewQueuePage() {
             className={`inline-flex items-center gap-1.5 rounded-lg border px-4 py-2 text-sm font-medium transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
               activeTab === id
                 ? "bg-primary text-white border-primary shadow-sm"
-                : "bg-white dark:bg-gray-900 text-gray-600 dark:text-gray-400 border-gray-200 dark:border-gray-700 hover:bg-gray-50 dark:hover:bg-gray-800"
+                : "bg-[hsl(var(--background-card))] text-[hsl(var(--foreground-muted))] border-[hsl(var(--border))] hover:bg-[hsl(var(--sidebar-hover-bg))]"
             }`}
           >
             {label}
@@ -311,10 +324,10 @@ export function ReviewQueuePage() {
                     <SeverityBadge severity={inc?.cr4c3_severity} />
                   </div>
                   <div className="flex-1">
-                    <p className="text-sm font-semibold text-gray-900 dark:text-gray-100 line-clamp-2">{rca.cr4c3_rcatitle}</p>
-                    <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 line-clamp-2">{rca.cr4c3_effectstatement}</p>
+                    <p className="text-sm font-semibold text-[hsl(var(--foreground))] line-clamp-2">{rca.cr4c3_rcatitle}</p>
+                    <p className="text-xs text-[hsl(var(--foreground-muted))] mt-1 line-clamp-2">{rca.cr4c3_effectstatement}</p>
                   </div>
-                  <div className="flex items-center justify-between text-xs text-gray-400 dark:text-gray-500">
+                  <div className="flex items-center justify-between text-xs text-[hsl(var(--foreground-muted))]">
                     <span>By {getUserName(rca._cr4c3_submittedby_value)}</span>
                     <span>{formatDateTime(rca.cr4c3_submittedat)}</span>
                   </div>
@@ -398,6 +411,8 @@ export function ReviewQueuePage() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
+      </>
+      )}
     </PageWrapper>
   );
 }

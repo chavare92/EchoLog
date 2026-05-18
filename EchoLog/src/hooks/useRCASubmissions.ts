@@ -51,3 +51,18 @@ export function useUpdateRCA() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Operation failed"),
   });
 }
+
+export function useDeleteRCA() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await Cr4c3_rcasubmissionsService.delete(id);
+      unwrapResult(result);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [RCA_KEY] });
+      toast.success("RCA deleted");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed"),
+  });
+}

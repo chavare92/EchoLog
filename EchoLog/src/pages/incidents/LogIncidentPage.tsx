@@ -34,7 +34,7 @@ const schema = z.object({
   departmentId: z.string().min(1, "Department is required"),
   subdepartmentId: z.string().min(1, "Subdepartment is required"),
   processId: z.string().min(1, "Process is required"),
-  teamId: z.string().optional(),
+  teamId: z.string().min(1, "Team is required"),
   assigneeId: z.string().optional(),
 });
 type FormValues = z.infer<typeof schema>;
@@ -65,11 +65,12 @@ export function LogIncidentPage() {
   const watchDept = watch("departmentId");
   const watchSubdept = watch("subdepartmentId");
   const watchProcess = watch("processId");
-  watch("teamId");
+  const watchTeam = watch("teamId");
 
   useEffect(() => { setValue("subdepartmentId", ""); setValue("processId", ""); setValue("teamId", ""); }, [watchDept, setValue]);
   useEffect(() => { setValue("processId", ""); setValue("teamId", ""); }, [watchSubdept, setValue]);
-  useEffect(() => { setValue("teamId", ""); }, [watchProcess, setValue]);
+  useEffect(() => { setValue("teamId", ""); setValue("assigneeId", ""); }, [watchProcess, setValue]);
+  useEffect(() => { setValue("assigneeId", ""); }, [watchTeam, setValue]);
 
   const { data: departments } = useDepartments();
   const { data: subdepts } = useSubdepartments(watchDept || undefined);
@@ -78,8 +79,9 @@ export function LogIncidentPage() {
   const { data: allUsers } = useUserProfiles();
   const { data: existingIncidents } = useIncidents();
 
-  // Assignee candidates: filter by process if available
+  // Assignee candidates: cascade - filter by team first, then process
   const assigneeCandidates = (allUsers ?? []).filter((u) => {
+    if (watchTeam && u._cr4c3_team_value) return u._cr4c3_team_value === watchTeam;
     if (watchProcess && u._cr4c3_process_value) return u._cr4c3_process_value === watchProcess;
     return true;
   });
@@ -148,10 +150,10 @@ export function LogIncidentPage() {
           <div className="p-2 rounded-lg bg-primary/10">
             <FileWarning className="w-5 h-5 text-primary" aria-hidden="true" />
           </div>
-          <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100">Log New Incident</h2>
+          <h2 className="text-xl font-bold text-[hsl(var(--foreground))]">Log New Incident</h2>
         </div>
         <div className="hidden sm:flex items-center gap-2">
-          <span className="text-xs text-gray-500 dark:text-gray-400">Reference preview:</span>
+          <span className="text-xs text-[hsl(var(--foreground-muted))]">Reference preview:</span>
           <TicketRef value={ticketPreview} />
         </div>
       </motion.div>
@@ -226,9 +228,9 @@ export function LogIncidentPage() {
                 {errors.processId && <p className="text-xs text-red-600" role="alert">{errors.processId.message}</p>}
               </div>
 
-              {/* Team (optional) */}
+              {/* Team */}
               <div className="space-y-1.5">
-                <Label htmlFor="team-select">Team <span className="text-xs text-gray-400 font-normal">(optional)</span></Label>
+                <Label htmlFor="team-select">Team <span className="text-red-500" aria-hidden="true">*</span></Label>
                 <Controller name="teamId" control={control} render={({ field }) => (
                   <Select value={field.value ?? ""} onValueChange={field.onChange} disabled={!watchProcess}>
                     <SelectTrigger id="team-select">
@@ -241,6 +243,7 @@ export function LogIncidentPage() {
                     </SelectContent>
                   </Select>
                 )} />
+                {errors.teamId && <p className="text-xs text-red-600" role="alert">{errors.teamId.message}</p>}
               </div>
             </div>
           </GlassCard>
@@ -282,14 +285,14 @@ export function LogIncidentPage() {
                       className={`flex-1 flex flex-col items-center py-3 rounded-xl border-2 transition-all focus:outline-none focus-visible:ring-2 focus-visible:ring-primary/50 ${
                         field.value === String(val)
                           ? "border-primary bg-primary/5 shadow-sm"
-                          : "border-gray-200 dark:border-gray-700 bg-transparent hover:bg-gray-50 dark:hover:bg-gray-800"
+                          : "border-[hsl(var(--border))] bg-transparent hover:bg-[hsl(var(--sidebar-hover-bg))]"
                       }`}
                     >
                       <div className="flex items-center gap-1.5 mb-1">
                         <span className={`w-2 h-2 rounded-full ${SEVERITY_DOT_COLORS[String(val)]}`} aria-hidden="true" />
                         <SeverityBadge severity={val} />
                       </div>
-                      <span className="text-xs text-gray-500 dark:text-gray-400">{SEVERITY_TAT_LABELS[String(val)]}</span>
+                      <span className="text-xs text-[hsl(var(--foreground-muted))]">{SEVERITY_TAT_LABELS[String(val)]}</span>
                     </button>
                   )} />
                 ))}

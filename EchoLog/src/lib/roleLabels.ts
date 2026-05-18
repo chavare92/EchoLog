@@ -27,3 +27,10 @@ export function getRoleLabel(role: number | undefined | null): string {
   if (role === null || role === undefined) return "Member";
   return ROLE_LABELS[role] ?? "Member";
 }
+
+/** Get Tailwind badge classes for a role code, with fallback. */
+export function getRoleColor(role: number | undefined | null): string {
+  if (role === null || role === undefined)
+    return "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500";
+  return ROLE_COLORS[role] ?? "bg-gray-100 text-gray-500 dark:bg-gray-800 dark:text-gray-500";
+}
