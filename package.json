@@ -1,0 +1,15 @@
+{
+  "name": "echolog-root",
+  "private": true,
+  "version": "0.0.0",
+  "type": "module",
+  "scripts": {
+    "dev": "npm run dev --workspace=EchoLog",
+    "build": "npm run build --workspace=EchoLog",
+    "lint": "npm run lint --workspace=EchoLog",
+    "preview": "npm run preview --workspace=EchoLog"
+  },
+  "workspaces": [
+    "EchoLog"
+  ]
+}
