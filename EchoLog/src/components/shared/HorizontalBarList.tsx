@@ -20,15 +20,19 @@ export function HorizontalBarList({ items, className }: HorizontalBarListProps) 
         const pct = Math.round((item.count / max) * 100);
         return (
           <div key={item.label}>
-            <div className="flex items-center justify-between mb-1">
-              <span className="text-xs text-gray-600 dark:text-gray-400 truncate max-w-[60%]">{item.label}</span>
-              <span className="text-xs font-semibold text-gray-800 dark:text-gray-200 tabular-nums">{item.count}</span>
+            <div className="flex items-center justify-between mb-1.5">
+              <span className="text-xs font-medium text-[hsl(var(--foreground-muted))] truncate max-w-[65%]">
+                {item.label}
+              </span>
+              <span className="text-xs font-bold text-[hsl(var(--foreground))] tabular-nums ml-2">
+                {item.count}
+              </span>
             </div>
-            <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+            <div className="h-2 rounded-full bg-[hsl(var(--border))] overflow-hidden">
               <div
                 className={cn(
-                  "h-full rounded-full transition-all duration-700",
-                  item.color ?? "bg-primary"
+                  "h-full rounded-full transition-all duration-700 ease-out",
+                  item.color ?? "bg-gradient-to-r from-amber-400 to-amber-500"
                 )}
                 style={{ width: `${pct}%` }}
                 role="progressbar"

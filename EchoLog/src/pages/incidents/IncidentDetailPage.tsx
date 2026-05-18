@@ -26,7 +26,7 @@ import {
   Eye,
 } from "lucide-react";
 import { currentUserAtom } from "@/store/authAtoms";
-import { useIncident, useUpdateIncident } from "@/hooks/useIncidents";
+import { useIncident, useUpdateIncident, useDeleteIncident } from "@/hooks/useIncidents";
 import { useRCASubmissions, useCreateRCA, useUpdateRCA } from "@/hooks/useRCASubmissions";
 import { usePreventiveActions, useCreatePA } from "@/hooks/usePreventiveActions";
 import { useAuditLogs, useCreateAuditLog } from "@/hooks/useAuditLogs";
@@ -88,6 +88,7 @@ export function IncidentDetailPage() {
   const { data: userProfiles } = useUserProfiles();
 
   const updateIncident = useUpdateIncident();
+  const deleteIncident = useDeleteIncident();
   const createRCA = useCreateRCA();
   const updateRCA = useUpdateRCA();
   const createPA = useCreatePA();
@@ -114,6 +115,9 @@ export function IncidentDetailPage() {
   const [paDueDate, setPaDueDate] = useState("");
   const [cancelDialogOpen, setCancelDialogOpen] = useState(false);
   const [reopenDialogOpen, setReopenDialogOpen] = useState(false);
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [reassignDialogOpen, setReassignDialogOpen] = useState(false);
+  const [reassignId, setReassignId] = useState("");
 
   // Sync RCA form fields when existing RCA loads
   useEffect(() => {
@@ -127,7 +131,7 @@ export function IncidentDetailPage() {
   const { data: rcaCauses } = useFishboneCauses(existingRCA?.cr4c3_rcasubmissionid);
 
   if (isLoading) return <div className="p-6"><SkeletonCard /></div>;
-  if (!incident) return <div className="p-8 text-center text-gray-500 dark:text-gray-400">Incident not found.</div>;
+  if (!incident) return <div className="p-8 text-center text-[hsl(var(--foreground-muted))]">Incident not found.</div>;
 
   const getDeptName = (val?: string) => departments?.find((d) => d.cr4c3_departmentid === val)?.cr4c3_name;
   const getSubdeptName = (val?: string) => allSubdepts?.find((s) => s.cr4c3_subdepartmentid === val)?.cr4c3_name;
@@ -135,7 +139,23 @@ export function IncidentDetailPage() {
   const getTeamName = (val?: string) => allTeams?.find((t) => t.cr4c3_teamid === val)?.cr4c3_name;
   const getUserName = (val?: string) => userProfiles?.find((u) => u.cr4c3_userprofileid === val)?.cr4c3_fullname;
 
-  const statusIdx = STATUS_STEPS.findIndex((s) => s.key === incident.cr4c3_status);
+  // Resolve L1/L2 manager through assignee's profile
+  const assigneeProfile = userProfiles?.find((u) => u.cr4c3_userprofileid === incident._cr4c3_assignee_value);
+  const l1ManagerName = getUserName(assigneeProfile?._cr4c3_manager_value);
+  const l2ManagerName = getUserName(assigneeProfile?._cr4c3_l2manager_value);
+
+  // Team-scoped candidates for reassign
+  const reassignCandidates = (userProfiles ?? []).filter((u) =>
+    incident._cr4c3_team_value ? u._cr4c3_team_value === incident._cr4c3_team_value : true
+  );
+
+  const effectiveStatus = incident.cr4c3_status === INCIDENT_STATUS.RCARejected
+    ? INCIDENT_STATUS.RCAInReview
+    : incident.cr4c3_status;
+  const statusIdx = Math.max(0, STATUS_STEPS.findIndex((s) => s.key === effectiveStatus));
+  const progressPct = incident.cr4c3_status === INCIDENT_STATUS.Cancelled
+    ? 0
+    : ((statusIdx + 1) / STATUS_STEPS.length) * 100;
   const overdue = isOverdue(incident.cr4c3_duedate);
   const remaining = incident.cr4c3_duedate ? getRemainingTATMs(incident.cr4c3_duedate) : null;
 
@@ -156,10 +176,12 @@ export function IncidentDetailPage() {
     (isMyIncident || guard.isAdmin);
 
   const canCreatePA =
-    status === INCIDENT_STATUS.RCAApproved &&
-    (guard.isAdmin || guard.isAssignee);
+    (status === INCIDENT_STATUS.RCAApproved || status === INCIDENT_STATUS.PAClosed) &&
+    guard.canCreatePA;
 
   const canEdit = guard.isAdmin || (guard.isAssignee && isMyIncident);
+  const canDelete = guard.isAdmin;
+  const canReassign = guard.isAdmin || (guard.isL1Manager || guard.isL2Manager);
 
   const canCancelIncident =
     guard.canCancelIncident &&
@@ -314,6 +336,22 @@ export function IncidentDetailPage() {
     toast.success("Incident cancelled");
   };
 
+  // Delete incident (Admin only — hard delete)
+  const handleDeleteIncident = async () => {
+    await deleteIncident.mutateAsync(id!);
+    navigate("/incidents");
+  };
+
+  // Reassign incident
+  const handleReassign = async () => {
+    if (!reassignId) return;
+    const prev = incident._cr4c3_assignee_value;
+    await updateIncident.mutateAsync({ id: id!, fields: { _cr4c3_assignee_value: reassignId, cr4c3_updatedat: new Date().toISOString() } });
+    writeAuditLog("Updated", `Assignee changed`, prev, reassignId);
+    setReassignDialogOpen(false);
+    toast.success("Reassigned");
+  };
+
   // Re-open incident (Admin/L2Manager) — PRD §3.3
   const handleReopenIncident = async () => {
     // 1. Reset status and SLA timer
@@ -353,7 +391,7 @@ export function IncidentDetailPage() {
           Back
         </Button>
         <span className="text-gray-300 dark:text-gray-600">/</span>
-        <span className="text-xs text-gray-500 dark:text-gray-400">Incidents</span>
+        <span className="text-xs text-[hsl(var(--foreground-muted))]">Incidents</span>
         <span className="text-gray-300 dark:text-gray-600">/</span>
         <TicketRef value={incident.cr4c3_ticketreference} />
       </motion.div>
@@ -364,7 +402,7 @@ export function IncidentDetailPage() {
           <div className="flex flex-col gap-4">
             <div className="flex flex-wrap items-start gap-3">
               <div className="flex-1 min-w-0">
-                <h2 className="text-xl font-bold text-gray-900 dark:text-gray-100 leading-tight">{incident.cr4c3_title}</h2>
+                <h2 className="text-xl font-bold text-[hsl(var(--foreground))] leading-tight">{incident.cr4c3_title}</h2>
                 <div className="flex flex-wrap items-center gap-2 mt-2">
                   <SeverityBadge severity={incident.cr4c3_severity} />
                   <StatusBadge status={incident.cr4c3_status} />
@@ -377,6 +415,17 @@ export function IncidentDetailPage() {
                 </div>
               </div>
               <div className="flex gap-2 flex-wrap">
+                {canDelete && (
+                  <Button size="sm" variant="outline" onClick={() => setDeleteDialogOpen(true)}
+                    className="border-red-300 text-red-700 hover:bg-red-50 dark:border-red-700 dark:text-red-400">
+                    <Trash2 className="w-4 h-4 mr-1.5" aria-hidden="true" />Delete
+                  </Button>
+                )}
+                {canReassign && (
+                  <Button size="sm" variant="outline" onClick={() => { setReassignId(incident._cr4c3_assignee_value ?? ""); setReassignDialogOpen(true); }}>
+                    <Users className="w-4 h-4 mr-1.5" />Reassign
+                  </Button>
+                )}
                 {canEdit && (
                   <Button variant="outline" size="sm" onClick={openEditDialog}>
                     <Pencil className="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -416,7 +465,7 @@ export function IncidentDetailPage() {
                   <TATCountdown dueDate={incident.cr4c3_duedate} />
                 </div>
                 {remaining !== null && (
-                  <div className="flex items-center gap-1 text-sm text-gray-600 dark:text-gray-400">
+                  <div className="flex items-center gap-1 text-sm text-[hsl(var(--foreground-muted))]">
                     {overdue
                       ? <><AlertTriangle className="w-4 h-4 text-red-500" aria-hidden="true" /> <span className="text-red-600 dark:text-red-400 font-medium">{formatDuration(Math.abs(remaining))} overdue</span></>
                       : <><CheckCircle className="w-4 h-4 text-amber-500" aria-hidden="true" /> <span>{formatDuration(remaining)} remaining</span></>
@@ -428,15 +477,15 @@ export function IncidentDetailPage() {
 
             {/* Progress bar */}
             <div>
-              <div className="flex justify-between text-xs text-gray-500 dark:text-gray-400 mb-1">
+              <div className="flex justify-between text-xs text-[hsl(var(--foreground-muted))] mb-1">
                 {STATUS_STEPS.map((step, i) => (
                   <span key={step.key} className={`${i <= statusIdx ? "text-primary font-medium" : ""}`}>{step.label}</span>
                 ))}
               </div>
-              <div className="h-2 rounded-full bg-gray-100 dark:bg-gray-800 overflow-hidden">
+              <div className="h-2 rounded-full bg-[hsl(var(--background))] overflow-hidden">
                 <div
-                  className="h-full rounded-full bg-primary transition-all"
-                  style={{ width: `${((statusIdx + 1) / STATUS_STEPS.length) * 100}%` }}
+                  className={`h-full rounded-full transition-all ${incident.cr4c3_status === INCIDENT_STATUS.Cancelled ? "bg-gray-400" : "bg-primary"}`}
+                  style={{ width: `${progressPct}%` }}
                   role="progressbar"
                   aria-valuenow={statusIdx + 1}
                   aria-valuemin={1}
@@ -477,9 +526,9 @@ export function IncidentDetailPage() {
               <div className="lg:col-span-2 space-y-5">
                 {/* Description */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Description</h3>
-                  <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap leading-relaxed">
-                    {incident.cr4c3_description || <span className="text-gray-400 dark:text-gray-500 italic">No description provided.</span>}
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-3">Description</h3>
+                  <p className="text-sm text-[hsl(var(--foreground))] whitespace-pre-wrap leading-relaxed">
+                    {incident.cr4c3_description || <span className="text-[hsl(var(--foreground-muted))] italic">No description provided.</span>}
                   </p>
                 </GlassCard>
 
@@ -488,8 +537,8 @@ export function IncidentDetailPage() {
                   <div className="rounded-xl bg-gradient-to-r from-primary/10 via-primary/5 to-transparent border border-primary/20 p-5">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Root Cause Analysis Required</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">This incident is pending an RCA submission.</p>
+                        <p className="text-sm font-semibold text-[hsl(var(--foreground))]">Root Cause Analysis Required</p>
+                        <p className="text-xs text-[hsl(var(--foreground-muted))] mt-0.5">This incident is pending an RCA submission.</p>
                       </div>
                       <Button size="sm" onClick={() => navigate(`/incidents/${id}/rca`)}>
                         <Search className="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -502,8 +551,8 @@ export function IncidentDetailPage() {
                   <div className="rounded-xl bg-gradient-to-r from-blue-500/10 via-blue-500/5 to-transparent border border-blue-200 dark:border-blue-800 p-5">
                     <div className="flex items-center justify-between gap-4 flex-wrap">
                       <div>
-                        <p className="text-sm font-semibold text-gray-900 dark:text-gray-100">Ready to Investigate</p>
-                        <p className="text-xs text-gray-500 dark:text-gray-400 mt-0.5">Start the investigation to move this incident forward.</p>
+                        <p className="text-sm font-semibold text-[hsl(var(--foreground))]">Ready to Investigate</p>
+                        <p className="text-xs text-[hsl(var(--foreground-muted))] mt-0.5">Start the investigation to move this incident forward.</p>
                       </div>
                       <Button size="sm" variant="outline" onClick={handleStartInvestigation}
                         className="border-blue-300 text-blue-700 hover:bg-blue-50 dark:border-blue-700 dark:text-blue-400">
@@ -518,7 +567,7 @@ export function IncidentDetailPage() {
               <div className="space-y-4">
                 {/* Org Path */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-3 flex items-center gap-1.5">
                     <MapPin className="w-4 h-4 text-primary" aria-hidden="true" />
                     Org Path
                   </h3>
@@ -530,8 +579,8 @@ export function IncidentDetailPage() {
                       { label: "Team", value: getTeamName(incident._cr4c3_team_value) },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex justify-between gap-2">
-                        <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium text-right">{value ?? "—"}</dd>
+                        <dt className="text-[hsl(var(--foreground-muted))]">{label}</dt>
+                        <dd className="text-[hsl(var(--foreground))] font-medium text-right">{value ?? "—"}</dd>
                       </div>
                     ))}
                   </dl>
@@ -539,7 +588,7 @@ export function IncidentDetailPage() {
 
                 {/* People */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3 flex items-center gap-1.5">
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-3 flex items-center gap-1.5">
                     <Users className="w-4 h-4 text-primary" aria-hidden="true" />
                     People
                   </h3>
@@ -547,10 +596,12 @@ export function IncidentDetailPage() {
                     {[
                       { label: "Logged by", value: !userProfiles ? "Loading…" : (getUserName(incident._cr4c3_loggedby_value) ?? "—") },
                       { label: "Assignee", value: !userProfiles ? "Loading…" : (incident._cr4c3_assignee_value ? (getUserName(incident._cr4c3_assignee_value) ?? "—") : "Unassigned") },
+                      { label: "L1 Manager", value: !userProfiles ? "Loading…" : (l1ManagerName ?? "—") },
+                      { label: "L2 Manager", value: !userProfiles ? "Loading…" : (l2ManagerName ?? "—") },
                     ].map(({ label, value }) => (
                       <div key={label} className="flex justify-between gap-2">
-                        <dt className="text-gray-500 dark:text-gray-400">{label}</dt>
-                        <dd className={`font-medium text-right ${value === "Unassigned" ? "text-gray-400 dark:text-gray-500 italic" : value === "Loading…" ? "text-gray-400 dark:text-gray-500 animate-pulse" : "text-gray-900 dark:text-gray-100"}`}>{value}</dd>
+                        <dt className="text-[hsl(var(--foreground-muted))]">{label}</dt>
+                        <dd className={`font-medium text-right ${value === "Unassigned" ? "text-[hsl(var(--foreground-muted))] italic" : value === "Loading…" ? "text-[hsl(var(--foreground-muted))] animate-pulse" : "text-[hsl(var(--foreground))]"}`}>{value}</dd>
                       </div>
                     ))}
                   </dl>
@@ -565,13 +616,13 @@ export function IncidentDetailPage() {
                     ].filter(Boolean);
                     if (parts.length === 0) return null;
                     return (
-                      <div className="mt-3 pt-3 border-t border-gray-100 dark:border-gray-800">
-                        <p className="text-xs font-medium text-gray-500 dark:text-gray-400 mb-1.5">Assignee Org Path</p>
-                        <div className="flex flex-wrap items-center gap-1 text-xs text-gray-700 dark:text-gray-300">
+                      <div className="mt-3 pt-3 border-t border-[hsl(var(--border))]">
+                        <p className="text-xs font-medium text-[hsl(var(--foreground-muted))] mb-1.5">Assignee Org Path</p>
+                        <div className="flex flex-wrap items-center gap-1 text-xs text-[hsl(var(--foreground))]">
                           {parts.map((part, i) => (
                             <span key={i} className="flex items-center gap-1">
                               {i > 0 && <span className="text-gray-300 dark:text-gray-600" aria-hidden="true">›</span>}
-                              <span className="rounded bg-gray-100 dark:bg-gray-800 px-1.5 py-0.5 font-medium">{part}</span>
+                              <span className="rounded bg-[hsl(var(--background))] px-1.5 py-0.5 font-medium">{part}</span>
                             </span>
                           ))}
                         </div>
@@ -582,16 +633,16 @@ export function IncidentDetailPage() {
 
                 {/* Timeline */}
                 <GlassCard className="p-5">
-                  <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200 mb-3">Timeline</h3>
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-3">Timeline</h3>
                   <dl className="space-y-2 text-sm">
                     <div className="flex justify-between gap-2">
-                      <dt className="text-gray-500 dark:text-gray-400">Created</dt>
-                      <dd className="text-gray-900 dark:text-gray-100 font-medium">{formatDate(incident.cr4c3_createdat)}</dd>
+                      <dt className="text-[hsl(var(--foreground-muted))]">Created</dt>
+                      <dd className="text-[hsl(var(--foreground))] font-medium">{formatDate(incident.cr4c3_createdat)}</dd>
                     </div>
                     {incident.cr4c3_updatedat && (
                       <div className="flex justify-between gap-2">
-                        <dt className="text-gray-500 dark:text-gray-400">Updated</dt>
-                        <dd className="text-gray-900 dark:text-gray-100 font-medium">{formatDate(incident.cr4c3_updatedat)}</dd>
+                        <dt className="text-[hsl(var(--foreground-muted))]">Updated</dt>
+                        <dd className="text-[hsl(var(--foreground))] font-medium">{formatDate(incident.cr4c3_updatedat)}</dd>
                       </div>
                     )}
                   </dl>
@@ -604,7 +655,7 @@ export function IncidentDetailPage() {
           <TabsContent value="rca" className="space-y-4">
             {/* Header row */}
             <div className="flex items-center justify-between flex-wrap gap-2">
-              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Root Cause Analysis</h3>
+              <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Root Cause Analysis</h3>
               <div className="flex gap-2">
                 {existingRCA && (
                   <Button variant="outline" size="sm" onClick={() => navigate(`/incidents/${id}/rca`)}>
@@ -625,7 +676,7 @@ export function IncidentDetailPage() {
             {(!rcaList || rcaList.length === 0) && !canSubmitRCA && (
               <GlassCard className="py-12 text-center">
                 <GitBranch className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-gray-500 dark:text-gray-400 font-medium">No RCA submitted yet</p>
+                <p className="text-[hsl(var(--foreground-muted))] font-medium">No RCA submitted yet</p>
               </GlassCard>
             )}
 
@@ -633,7 +684,7 @@ export function IncidentDetailPage() {
             {canSubmitRCA && (
               <GlassCard className="p-5">
                 <div className="flex items-center justify-between mb-4">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">
                     {existingRCA ? "Edit RCA" : "New RCA"}
                     {existingRCA && <StatusBadge status={existingRCA.cr4c3_status} type="rca" className="ml-2 align-middle" />}
                   </h3>
@@ -658,7 +709,7 @@ export function IncidentDetailPage() {
                         rows={3}
                         placeholder="Describe the problem/effect (min 20 characters)…"
                       />
-                      <p className="text-xs text-gray-400 dark:text-gray-500">{rcaEffect.length} / 2000 characters</p>
+                      <p className="text-xs text-[hsl(var(--foreground-muted))]">{rcaEffect.length} / 2000 characters</p>
                     </div>
                     <div className="flex gap-2 flex-wrap">
                       <Button
@@ -690,12 +741,12 @@ export function IncidentDetailPage() {
                   // Read-only view for submitted / approved / under review RCA
                   <div className="space-y-3">
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Title</p>
-                      <p className="font-semibold text-gray-900 dark:text-gray-100">{existingRCA.cr4c3_rcatitle}</p>
+                      <p className="text-xs text-[hsl(var(--foreground-muted))] mb-0.5">Title</p>
+                      <p className="font-semibold text-[hsl(var(--foreground))]">{existingRCA.cr4c3_rcatitle}</p>
                     </div>
                     <div>
-                      <p className="text-xs text-gray-500 dark:text-gray-400 mb-0.5">Effect Statement</p>
-                      <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{existingRCA.cr4c3_effectstatement}</p>
+                      <p className="text-xs text-[hsl(var(--foreground-muted))] mb-0.5">Effect Statement</p>
+                      <p className="text-sm text-[hsl(var(--foreground))] whitespace-pre-wrap">{existingRCA.cr4c3_effectstatement}</p>
                     </div>
                     {existingRCA.cr4c3_reviewcomments && (
                       <div className="rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
@@ -712,12 +763,12 @@ export function IncidentDetailPage() {
               <GlassCard className="p-5">
                 <div className="flex items-start justify-between gap-3 mb-3">
                   <div>
-                    <p className="font-semibold text-gray-900 dark:text-gray-100">{existingRCA.cr4c3_rcatitle}</p>
-                    <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Submitted {formatDateTime(existingRCA.cr4c3_submittedat)}</p>
+                    <p className="font-semibold text-[hsl(var(--foreground))]">{existingRCA.cr4c3_rcatitle}</p>
+                    <p className="text-xs text-[hsl(var(--foreground-muted))] mt-0.5">Submitted {formatDateTime(existingRCA.cr4c3_submittedat)}</p>
                   </div>
                   <StatusBadge status={existingRCA.cr4c3_status} type="rca" />
                 </div>
-                <p className="text-sm text-gray-700 dark:text-gray-300 whitespace-pre-wrap">{existingRCA.cr4c3_effectstatement}</p>
+                <p className="text-sm text-[hsl(var(--foreground))] whitespace-pre-wrap">{existingRCA.cr4c3_effectstatement}</p>
                 {existingRCA.cr4c3_reviewcomments && (
                   <div className="mt-3 rounded-lg bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 p-3 text-sm text-amber-800 dark:text-amber-300">
                     <span className="font-semibold">Review Comments: </span>{existingRCA.cr4c3_reviewcomments}
@@ -730,7 +781,7 @@ export function IncidentDetailPage() {
             {existingRCA && (
               <GlassCard className="p-5">
                 <div className="flex items-center justify-between mb-4 flex-wrap gap-2">
-                  <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+                  <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">
                     Fishbone Analysis
                     <span className="ml-2 text-xs font-normal text-gray-400">({rcaCauses?.length ?? 0} cause{(rcaCauses?.length ?? 0) !== 1 ? "s" : ""})</span>
                   </h3>
@@ -743,7 +794,7 @@ export function IncidentDetailPage() {
 
                 {showFishboneDiagram ? (
                   // SVG Fishbone Diagram
-                  <div className="overflow-x-auto rounded-lg bg-white dark:bg-gray-900 border border-gray-100 dark:border-gray-800 p-2">
+                  <div className="overflow-x-auto rounded-lg bg-[hsl(var(--background-card))] border border-[hsl(var(--border))] p-2">
                     <svg viewBox="0 0 900 500" className="w-full min-w-[600px]" aria-label="Fishbone diagram" role="img">
                       {/* Spine */}
                       <line x1="100" y1="250" x2="790" y2="250" stroke="#d97706" strokeWidth="3" />
@@ -797,7 +848,7 @@ export function IncidentDetailPage() {
                       const canEdit = canSubmitRCA && (existingRCA.cr4c3_status === RCA_STATUS.Draft || existingRCA.cr4c3_status === RCA_STATUS.Rejected);
                       const isAddingThis = addingCauseCategory === cat;
                       return (
-                        <div key={cat} className="rounded-lg border border-gray-100 dark:border-gray-800 bg-gray-50/50 dark:bg-gray-900/20 p-3">
+                        <div key={cat} className="rounded-lg border border-[hsl(var(--border))] bg-gray-50/50 dark:bg-gray-900/20 p-3">
                           <div className="flex items-center justify-between mb-2">
                             <span className={`inline-flex items-center gap-1 rounded-md border px-2 py-0.5 text-xs font-semibold ${color}`}>
                               {label}
@@ -849,8 +900,8 @@ export function IncidentDetailPage() {
                           <div className="space-y-1 min-h-[24px]">
                             {categoryCauses.map((c) => (
                               <div key={c.cr4c3_fishbonecauseid} className="flex items-start gap-1.5 group">
-                                <span className="text-gray-400 dark:text-gray-500 text-xs mt-0.5 leading-none flex-shrink-0" aria-hidden="true">›</span>
-                                <span className="flex-1 text-xs text-gray-700 dark:text-gray-300 leading-relaxed">{c.cr4c3_causetext}</span>
+                                <span className="text-[hsl(var(--foreground-muted))] text-xs mt-0.5 leading-none flex-shrink-0" aria-hidden="true">›</span>
+                                <span className="flex-1 text-xs text-[hsl(var(--foreground))] leading-relaxed">{c.cr4c3_causetext}</span>
                                 {canEdit && (
                                   <button
                                     className="opacity-0 group-hover:opacity-100 text-red-400 hover:text-red-600 transition-opacity flex-shrink-0"
@@ -863,7 +914,7 @@ export function IncidentDetailPage() {
                               </div>
                             ))}
                             {categoryCauses.length === 0 && !isAddingThis && (
-                              <p className="text-xs text-gray-400 dark:text-gray-500 italic">No causes yet</p>
+                              <p className="text-xs text-[hsl(var(--foreground-muted))] italic">No causes yet</p>
                             )}
                           </div>
                         </div>
@@ -877,7 +928,7 @@ export function IncidentDetailPage() {
             {/* RCA Version History */}
             {rcaList && rcaList.length > 0 && (
               <GlassCard className="p-5">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-3 flex items-center gap-1.5">
+                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-3 flex items-center gap-1.5">
                   <History className="w-4 h-4 text-primary" aria-hidden="true" />
                   Version History
                   <span className="text-xs font-normal text-gray-400 ml-1">({rcaList.length} submission{rcaList.length !== 1 ? "s" : ""})</span>
@@ -886,20 +937,20 @@ export function IncidentDetailPage() {
                   {rcaList.map((rca, i) => (
                     <div
                       key={rca.cr4c3_rcasubmissionid}
-                      className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${i === 0 ? "bg-primary/5 border border-primary/15" : "bg-gray-50 dark:bg-gray-800/50"}`}
+                      className={`flex items-start gap-3 p-3 rounded-lg transition-colors ${i === 0 ? "bg-primary/5 border border-primary/15" : "bg-[hsl(var(--background))]/50"}`}
                     >
                       <div className="flex-shrink-0 mt-0.5 w-6 h-6 rounded-full bg-primary/10 dark:bg-primary/20 text-primary text-xs flex items-center justify-center font-semibold">
                         {rcaList.length - i}
                       </div>
                       <div className="flex-1 min-w-0">
                         <div className="flex flex-wrap items-center gap-2">
-                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100 truncate">{rca.cr4c3_rcatitle}</p>
+                          <p className="text-sm font-medium text-[hsl(var(--foreground))] truncate">{rca.cr4c3_rcatitle}</p>
                           {i === 0 && (
                             <span className="rounded-full bg-primary/10 text-primary text-xs px-2 py-0.5 font-medium">Current</span>
                           )}
                           <StatusBadge status={rca.cr4c3_status} type="rca" />
                         </div>
-                        <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">{formatDateTime(rca.cr4c3_submittedat)}</p>
+                        <p className="text-xs text-[hsl(var(--foreground-muted))] mt-0.5">{formatDateTime(rca.cr4c3_submittedat)}</p>
                         {rca.cr4c3_reviewcomments && (
                           <p className="mt-1.5 text-xs rounded bg-amber-50 dark:bg-amber-950/30 border border-amber-200 dark:border-amber-800 px-2 py-1 text-amber-700 dark:text-amber-400">
                             <span className="font-medium">Review: </span>{rca.cr4c3_reviewcomments}
@@ -916,7 +967,7 @@ export function IncidentDetailPage() {
           {/* PA Tab */}
           <TabsContent value="pa" className="space-y-4">
             <div className="flex items-center justify-between">
-              <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Preventive Actions</h3>
+              <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Preventive Actions</h3>
               {canCreatePA && (
                 <Button size="sm" onClick={() => setPaDialogOpen(true)}>
                   <PlusCircle className="w-4 h-4 mr-1.5" aria-hidden="true" />
@@ -927,7 +978,7 @@ export function IncidentDetailPage() {
             {!paList || paList.length === 0 ? (
               <GlassCard className="py-12 text-center">
                 <ShieldCheck className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-gray-500 dark:text-gray-400 font-medium">No preventive actions yet</p>
+                <p className="text-[hsl(var(--foreground-muted))] font-medium">No preventive actions yet</p>
                 {canCreatePA && (
                   <Button size="sm" className="mt-4" onClick={() => setPaDialogOpen(true)}>Create PA</Button>
                 )}
@@ -937,8 +988,8 @@ export function IncidentDetailPage() {
                 {paList.map((pa) => (
                   <GlassCard key={pa.cr4c3_preventiveactionid} className="p-4 flex items-center gap-3 cursor-pointer hover:shadow-md transition-shadow" onClick={() => navigate(`/preventive-actions/${pa.cr4c3_preventiveactionid}`)}>
                     <div className="flex-1 min-w-0">
-                      <p className="font-medium text-gray-900 dark:text-gray-100 text-sm truncate">{pa.cr4c3_title}</p>
-                      {pa.cr4c3_duedate && <p className="text-xs text-gray-400 dark:text-gray-500 mt-0.5">Due {formatDate(pa.cr4c3_duedate)}</p>}
+                      <p className="font-medium text-[hsl(var(--foreground))] text-sm truncate">{pa.cr4c3_title}</p>
+                      {pa.cr4c3_duedate && <p className="text-xs text-[hsl(var(--foreground-muted))] mt-0.5">Due {formatDate(pa.cr4c3_duedate)}</p>}
                     </div>
                     <StatusBadge status={pa.cr4c3_status} type="pa" />
                   </GlassCard>
@@ -949,27 +1000,27 @@ export function IncidentDetailPage() {
 
           {/* Audit Tab */}
           <TabsContent value="audit" className="space-y-3">
-            <h3 className="text-sm font-semibold text-gray-800 dark:text-gray-200">Activity Log</h3>
+            <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Activity Log</h3>
             {!auditLogs || auditLogs.length === 0 ? (
               <GlassCard className="py-12 text-center">
                 <GitBranch className="w-10 h-10 text-gray-300 dark:text-gray-600 mx-auto mb-3" aria-hidden="true" />
-                <p className="text-gray-500 dark:text-gray-400">No activity recorded yet.</p>
+                <p className="text-[hsl(var(--foreground-muted))]">No activity recorded yet.</p>
               </GlassCard>
             ) : (
               <div className="relative pl-6 space-y-4" role="list" aria-label="Audit log">
-                <div className="absolute left-2 top-2 bottom-2 border-l-2 border-gray-100 dark:border-gray-800" aria-hidden="true" />
+                <div className="absolute left-2 top-2 bottom-2 border-l-2 border-[hsl(var(--border))]" aria-hidden="true" />
                 {auditLogs.map((log) => (
                   <div key={log.cr4c3_auditlogid} className="relative" role="listitem">
                     <div className="absolute -left-4 top-1 w-3 h-3 rounded-full bg-primary border-2 border-white" aria-hidden="true" />
                     <GlassCard className="p-4">
                       <div className="flex justify-between gap-2 flex-wrap">
-                        <p className="text-sm font-medium text-gray-900 dark:text-gray-100">{log.cr4c3_description}</p>
-                        <time className="text-xs text-gray-400 dark:text-gray-500">{formatDateTime(log.cr4c3_timestamp)}</time>
+                        <p className="text-sm font-medium text-[hsl(var(--foreground))]">{log.cr4c3_description}</p>
+                        <time className="text-xs text-[hsl(var(--foreground-muted))]">{formatDateTime(log.cr4c3_timestamp)}</time>
                       </div>
                       {log.cr4c3_fieldchanged && (
                         <div className="mt-2 flex items-center gap-2 text-xs flex-wrap">
                           <code className="px-1.5 py-0.5 rounded bg-red-50 dark:bg-red-950 text-red-700 dark:text-red-400 line-through">{log.cr4c3_oldvalue ?? "—"}</code>
-                          <span className="text-gray-400 dark:text-gray-500">→</span>
+                          <span className="text-[hsl(var(--foreground-muted))]">→</span>
                           <code className="px-1.5 py-0.5 rounded bg-green-50 dark:bg-green-950 text-green-700 dark:text-green-400">{log.cr4c3_newvalue ?? "—"}</code>
                         </div>
                       )}
@@ -1057,6 +1108,45 @@ export function IncidentDetailPage() {
             <Button variant="outline" onClick={() => setPaDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleCreatePA} disabled={createPA.isPending}>
               {createPA.isPending ? "Creating…" : "Create PA"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Incident (Admin only) */}
+      <ConfirmDialog
+        open={deleteDialogOpen}
+        onOpenChange={setDeleteDialogOpen}
+        title="Delete Incident"
+        description={`This will permanently delete ${incident.cr4c3_ticketreference} and all associated data. This action cannot be undone.`}
+        variant="destructive"
+        onConfirm={handleDeleteIncident}
+        confirmLabel="Delete Permanently"
+        isLoading={deleteIncident.isPending}
+      />
+
+      {/* Reassign Dialog */}
+      <Dialog open={reassignDialogOpen} onOpenChange={setReassignDialogOpen}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Reassign Incident</DialogTitle>
+            <DialogDescription>Select a new assignee from the same team.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="reassign-select">Assignee</Label>
+            <Select value={reassignId} onValueChange={setReassignId}>
+              <SelectTrigger id="reassign-select"><SelectValue placeholder="Select assignee" /></SelectTrigger>
+              <SelectContent>
+                {reassignCandidates.map((u) => (
+                  <SelectItem key={u.cr4c3_userprofileid} value={u.cr4c3_userprofileid!}>{u.cr4c3_fullname}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignDialogOpen(false)}>Cancel</Button>
+            <Button onClick={handleReassign} disabled={!reassignId || updateIncident.isPending}>
+              {updateIncident.isPending ? "Saving…" : "Reassign"}
             </Button>
           </DialogFooter>
         </DialogContent>

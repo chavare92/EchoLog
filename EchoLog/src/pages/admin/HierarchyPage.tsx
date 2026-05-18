@@ -19,6 +19,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { useRoleGuard } from "@/auth/useRoleGuard";
+import { useIncidents } from "@/hooks/useIncidents";
 import {
   useDepartments, useCreateDepartment, useUpdateDepartment, useDeleteDepartment,
 } from "@/hooks/useDepartments";
@@ -48,6 +49,7 @@ import type { Cr4c3_departmentsBase } from "@/generated/models/Cr4c3_departments
 import type { Cr4c3_subdepartmentsBase } from "@/generated/models/Cr4c3_subdepartmentsModel";
 import type { Cr4c3_processesBase } from "@/generated/models/Cr4c3_processesModel";
 import type { Cr4c3_teamsBase } from "@/generated/models/Cr4c3_teamsModel";
+import { toast } from "sonner";
 
 export function HierarchyPage() {
   const { isAdmin } = useRoleGuard();
@@ -108,6 +110,7 @@ function SortableRow({
 
 function DepartmentsTab() {
   const { data: departments, isLoading } = useDepartments();
+  const { data: incidents } = useIncidents();
   const createDept = useCreateDepartment();
   const updateDept = useUpdateDepartment();
   const deleteDept = useDeleteDepartment();
@@ -163,6 +166,8 @@ function DepartmentsTab() {
   };
 
   const handleDelete = async () => {
+    const refCount = (incidents ?? []).filter((i) => i._cr4c3_department_value === deleteId).length;
+    if (refCount > 0) { toast.error(`Cannot delete — ${refCount} incident${refCount > 1 ? "s" : ""} reference this department`); setDeleteId(null); return; }
     await deleteDept.mutateAsync(deleteId!);
     setDeleteId(null);
   };
@@ -170,8 +175,8 @@ function DepartmentsTab() {
   return (
     <>
       <GlassCard>
-        <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-          <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+        <div className="flex items-center justify-between px-5 py-4 border-b border-[hsl(var(--border))]">
+          <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">
             Departments ({departments?.length ?? 0})
             {order.length > 0 && (
               <span className="ml-2 text-xs text-amber-600 font-normal">reordered</span>
@@ -211,10 +216,10 @@ function DepartmentsTab() {
                               <GripVertical className="w-4 h-4" />
                             </button>
                           </TableCell>
-                          <TableCell className={`font-medium ${isDragging ? "text-gray-400" : "text-gray-900 dark:text-gray-100"}`}>
+                          <TableCell className={`font-medium ${isDragging ? "text-gray-400" : "text-[hsl(var(--foreground))]"}`}>
                             {d.cr4c3_name}
                           </TableCell>
-                          <TableCell className="text-sm text-gray-500 dark:text-gray-400">
+                          <TableCell className="text-sm text-[hsl(var(--foreground-muted))]">
                             {d.cr4c3_description ?? "—"}
                           </TableCell>
                           <TableCell className="text-right">
@@ -285,6 +290,7 @@ function DepartmentsTab() {
 
 function SubdepartmentsTab() {
   const { data: departments } = useDepartments();
+  const { data: incidents } = useIncidents();
   const [selectedDept, setSelectedDept] = useState<string>("all");
   const effectiveDeptId = selectedDept !== "all" ? selectedDept : undefined;
   const { data: subdepts, isLoading } = useSubdepartments(effectiveDeptId, true);
@@ -322,6 +328,8 @@ function SubdepartmentsTab() {
   };
 
   const handleDelete = async () => {
+    const refCount = (incidents ?? []).filter((i) => i._cr4c3_subdepartment_value === deleteId).length;
+    if (refCount > 0) { toast.error(`Cannot delete — ${refCount} incident${refCount > 1 ? "s" : ""} reference this subdepartment`); setDeleteId(null); return; }
     await deleteSubdept.mutateAsync(deleteId!);
     setDeleteId(null);
   };
@@ -431,6 +439,7 @@ function SubdepartmentsTab() {
 
 function ProcessesTab() {
   const { data: subdepts } = useSubdepartments(undefined, true);
+  const { data: incidents } = useIncidents();
   const [selectedSubdept, setSelectedSubdept] = useState<string>("all");
   const effectiveSubdeptId = selectedSubdept !== "all" ? selectedSubdept : undefined;
   const { data: processes, isLoading } = useProcesses(effectiveSubdeptId, true);
@@ -468,6 +477,8 @@ function ProcessesTab() {
   };
 
   const handleDelete = async () => {
+    const refCount = (incidents ?? []).filter((i) => i._cr4c3_process_value === deleteId).length;
+    if (refCount > 0) { toast.error(`Cannot delete — ${refCount} incident${refCount > 1 ? "s" : ""} reference this process`); setDeleteId(null); return; }
     await deleteProcess.mutateAsync(deleteId!);
     setDeleteId(null);
   };
@@ -577,6 +588,7 @@ function ProcessesTab() {
 
 function TeamsTab() {
   const { data: processes } = useProcesses(undefined, true);
+  const { data: incidents } = useIncidents();
   const [selectedProcess, setSelectedProcess] = useState<string>("all");
   const effectiveProcessId = selectedProcess !== "all" ? selectedProcess : undefined;
   const { data: teams, isLoading } = useTeams(effectiveProcessId, true);
@@ -618,6 +630,8 @@ function TeamsTab() {
   };
 
   const handleDelete = async () => {
+    const refCount = (incidents ?? []).filter((i) => i._cr4c3_team_value === deleteId).length;
+    if (refCount > 0) { toast.error(`Cannot delete — ${refCount} incident${refCount > 1 ? "s" : ""} reference this team`); setDeleteId(null); return; }
     await deleteTeam.mutateAsync(deleteId!);
     setDeleteId(null);
   };

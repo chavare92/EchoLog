@@ -1,8 +1,8 @@
 import { useState } from "react";
 import { motion } from "framer-motion";
-import { Save, CheckCircle2, Plus, RefreshCw } from "lucide-react";
+import { Save, CheckCircle2, Plus, RefreshCw, Trash2 } from "lucide-react";
 import { useRoleGuard } from "@/auth/useRoleGuard";
-import { useSLARules, useUpdateSLARule, useCreateSLARule } from "@/hooks/useSLARules";
+import { useSLARules, useUpdateSLARule, useCreateSLARule, useDeleteSLARule } from "@/hooks/useSLARules";
 import { SEVERITY } from "@/lib/constants";
 import { PageWrapper, itemVariants } from "@/components/shared/PageWrapper";
 import { GlassCard } from "@/components/shared/GlassCard";
@@ -19,6 +19,7 @@ import {
   DialogFooter,
   DialogHeader,
   DialogTitle,
+  DialogDescription,
 } from "@/components/ui/dialog";
 
 export function SLARulesPage() {
@@ -26,9 +27,11 @@ export function SLARulesPage() {
   const { data: rules, isLoading, refetch } = useSLARules();
   const updateRule = useUpdateSLARule();
   const createRule = useCreateSLARule();
+  const deleteRule = useDeleteSLARule();
 
   const [edits, setEdits] = useState<Record<string, { tathours?: string; l1percent?: string }>>({});
   const [savedIds, setSavedIds] = useState<Set<string>>(new Set());
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Add SLA dialog state
   const [addOpen, setAddOpen] = useState(false);
@@ -41,7 +44,7 @@ export function SLARulesPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 dark:text-gray-400">Admin access required.</p>
+        <p className="text-[hsl(var(--foreground-muted))]">Admin access required.</p>
       </div>
     );
   }
@@ -88,7 +91,7 @@ export function SLARulesPage() {
       <motion.div variants={itemVariants}>
         <GlassCard>
           <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200">
-            <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">SLA Rules ({rules?.length ?? 0})</h3>
+            <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">SLA Rules ({rules?.length ?? 0})</h3>
             <div className="flex gap-2">
               <Button size="sm" variant="ghost" onClick={() => refetch()} disabled={isLoading}>
                 <RefreshCw className="w-3.5 h-3.5 mr-1" />
@@ -161,20 +164,18 @@ export function SLARulesPage() {
                         </span>
                       </TableCell>
                       <TableCell>
-                        {isSaved ? (
-                          <CheckCircle2 className="w-4 h-4 text-green-600" />
-                        ) : (
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            className="h-7 text-xs"
-                            disabled={!isDirty || updateRule.isPending}
-                            onClick={() => save(id)}
-                          >
-                            <Save className="w-3.5 h-3.5 mr-1" />
-                            Save
+                        <div className="flex gap-1">
+                          {isSaved ? (
+                            <CheckCircle2 className="w-4 h-4 text-green-600 mt-0.5" />
+                          ) : (
+                            <Button size="sm" variant="outline" className="h-7 text-xs" disabled={!isDirty || updateRule.isPending} onClick={() => save(id)}>
+                              <Save className="w-3.5 h-3.5 mr-1" />Save
+                            </Button>
+                          )}
+                          <Button size="sm" variant="ghost" className="h-7 w-7 p-0 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteConfirmId(id)}>
+                            <Trash2 className="w-3.5 h-3.5" />
                           </Button>
-                        )}
+                        </div>
                       </TableCell>
                     </TableRow>
                   );
@@ -187,8 +188,8 @@ export function SLARulesPage() {
 
       <motion.div variants={itemVariants}>
         <GlassCard className="p-5">
-          <h4 className="text-sm font-semibold text-gray-700 dark:text-gray-300 mb-2">About SLA Rules</h4>
-          <ul className="text-xs text-gray-500 dark:text-gray-400 space-y-1.5 list-disc list-inside">
+          <h4 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-2">About SLA Rules</h4>
+          <ul className="text-xs text-[hsl(var(--foreground-muted))] space-y-1.5 list-disc list-inside">
             <li>TAT Hours = Total time from incident creation to closure (in hours)</li>
             <li>L1 Review % = Percentage of incidents this severity requiring L1 review</li>
             <li>Changes take effect for newly created incidents only</li>
@@ -235,6 +236,23 @@ export function SLARulesPage() {
             <Button variant="outline" onClick={() => setAddOpen(false)}>Cancel</Button>
             <Button onClick={handleAdd} disabled={createRule.isPending}>
               {createRule.isPending ? "Saving…" : "Add Rule"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Delete SLA Rule confirm dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600"><Trash2 className="w-4 h-4" />Delete SLA Rule</DialogTitle>
+            <DialogDescription>
+              This will permanently delete "{(rules ?? []).find((r) => r.cr4c3_slaruleid === deleteConfirmId)?.cr4c3_slaname}". This cannot be undone.
+            </DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={async () => { await deleteRule.mutateAsync(deleteConfirmId!); setDeleteConfirmId(null); }} disabled={deleteRule.isPending}>
+              {deleteRule.isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

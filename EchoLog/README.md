@@ -44,9 +44,10 @@ A **Power Apps Code App** built with React, TypeScript, and Vite, backed by Micr
 ## Tech Stack
 
 - **Runtime**: Power Apps Code App (hosted in Power Apps player)
-- **Frontend**: React 18, TypeScript, Vite
-- **State**: Jotai (global) + TanStack Query v5 (server state)
-- **UI**: Tailwind CSS, shadcn/ui, Lucide icons, Sonner toasts
+- **Frontend**: React 19.2, TypeScript 5, Vite 6
+- **State**: Jotai 2.20 (global) + TanStack Query v5 (server state)
+- **UI**: Tailwind CSS 4.3 (`@import "tailwindcss"` — no config file), shadcn/ui, Lucide icons, Sonner 2.0.7 toasts, Framer Motion 12.38 animations
+- **Router**: React Router v7 (lazy-loaded pages)
 - **Data**: Microsoft Dataverse via `@microsoft/power-apps` SDK
 - **Auth**: Custom email/password auth against `cr4c3_userprofiles` (SHA-256 hashed passwords)
 - **Tooling**: Power Platform CLI (`pac`)
@@ -72,6 +73,7 @@ All tables use the `cr4c3_` publisher prefix:
 | `cr4c3_slarules` | SLA TAT configuration per severity |
 | `cr4c3_notifications` | In-app notifications per user |
 | `cr4c3_auditlogs` | Audit trail entries |
+| `cr4c3_delegations` | Bounded role delegations (acting roles) |
 
 ---
 

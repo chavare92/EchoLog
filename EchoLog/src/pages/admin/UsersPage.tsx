@@ -2,9 +2,14 @@ import { useState } from "react";
 import { motion } from "framer-motion";
 import { Pencil, Search, Plus, Link2, Trash2, Calendar } from "lucide-react";
 import { useRoleGuard } from "@/auth/useRoleGuard";
-import { useUserProfiles, useUpdateUserProfile, useCreateUserProfile } from "@/hooks/useUserProfiles";
+import { useUserProfiles, useUpdateUserProfile, useCreateUserProfile, useDeleteUserProfile } from "@/hooks/useUserProfiles";
 import { useDelegations, useCreateDelegation, useRevokeDelegation } from "@/hooks/useDelegations";
+import { useDepartments } from "@/hooks/useDepartments";
+import { useSubdepartments } from "@/hooks/useSubdepartments";
+import { useProcesses } from "@/hooks/useProcesses";
+import { useTeams } from "@/hooks/useTeams";
 import { ROLE_LABELS, ROLE_COLORS } from "@/lib/roleLabels";
+import { sha256 } from "@/lib/utils";
 import { GlassCard } from "@/components/shared/GlassCard";
 import { SkeletonTable } from "@/components/shared/Skeletons";
 import { Button } from "@/components/ui/button";
@@ -30,15 +35,27 @@ export function UsersPage() {
   const { data: users, isLoading } = useUserProfiles();
   const updateUser = useUpdateUserProfile();
   const createUser = useCreateUserProfile();
+  const deleteUser = useDeleteUserProfile();
   const { data: delegations, isLoading: delegationsLoading } = useDelegations();
   const createDelegation = useCreateDelegation();
   const revokeDelegation = useRevokeDelegation();
+
+  // Org hierarchy data for dropdowns
+  const { data: departments } = useDepartments();
+  const { data: subdepts } = useSubdepartments(undefined, true);
+  const { data: processes } = useProcesses(undefined, true);
+  const { data: teams } = useTeams(undefined, true);
 
   const [search, setSearch] = useState("");
   const [editing, setEditing] = useState<Cr4c3_userprofilesBase | null>(null);
   const [editRole, setEditRole] = useState("");
   const [editManager, setEditManager] = useState("");
   const [editL2, setEditL2] = useState("");
+  const [editDept, setEditDept] = useState("");
+  const [editSubdept, setEditSubdept] = useState("");
+  const [editProcess, setEditProcess] = useState("");
+  const [editTeam, setEditTeam] = useState("");
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
 
   // Add User dialog
   const [addOpen, setAddOpen] = useState(false);
@@ -46,6 +63,12 @@ export function UsersPage() {
   const [addEmail, setAddEmail] = useState("");
   const [addPassword, setAddPassword] = useState("");
   const [addRole, setAddRole] = useState("");
+  const [addDept, setAddDept] = useState("");
+  const [addSubdept, setAddSubdept] = useState("");
+  const [addProcess, setAddProcess] = useState("");
+  const [addTeam, setAddTeam] = useState("");
+  const [addManager, setAddManager] = useState("");
+  const [addL2, setAddL2] = useState("");
   const [addError, setAddError] = useState("");
 
   // Add Delegation dialog
@@ -62,7 +85,7 @@ export function UsersPage() {
   if (!isAdmin) {
     return (
       <div className="flex items-center justify-center h-64">
-        <p className="text-gray-500 dark:text-gray-400">Admin access required.</p>
+        <p className="text-[hsl(var(--foreground-muted))]">Admin access required.</p>
       </div>
     );
   }
@@ -74,16 +97,15 @@ export function UsersPage() {
       u.cr4c3_email?.toLowerCase().includes(search.toLowerCase())
   );
 
-  const managers = (users ?? []).filter(
-    (u) => u.cr4c3_role === USER_ROLE.L1Manager || u.cr4c3_role === USER_ROLE.L2Manager
-  );
-  const l2managers = (users ?? []).filter((u) => u.cr4c3_role === USER_ROLE.L2Manager);
-
   const openEdit = (u: Cr4c3_userprofilesBase) => {
     setEditing(u);
     setEditRole(String(u.cr4c3_role ?? ""));
     setEditManager(u._cr4c3_manager_value ?? "");
     setEditL2(u._cr4c3_l2manager_value ?? "");
+    setEditDept(u._cr4c3_department_value ?? "");
+    setEditSubdept(u._cr4c3_subdepartment_value ?? "");
+    setEditProcess(u._cr4c3_process_value ?? "");
+    setEditTeam(u._cr4c3_team_value ?? "");
   };
 
   const saveEdit = async () => {
@@ -92,16 +114,15 @@ export function UsersPage() {
       id: editing.cr4c3_userprofileid,
       fields: {
         ...(editRole ? { cr4c3_role: Number(editRole) } : {}),
-        ...(editManager && editManager !== "none" ? { [`_cr4c3_manager_value`]: editManager } : {}),
-        ...(editL2 && editL2 !== "none" ? { [`_cr4c3_l2manager_value`]: editL2 } : {}),
+        ...(editManager && editManager !== "none" ? { _cr4c3_manager_value: editManager } : {}),
+        ...(editL2 && editL2 !== "none" ? { _cr4c3_l2manager_value: editL2 } : {}),
+        ...(editDept ? { _cr4c3_department_value: editDept } : {}),
+        ...(editSubdept ? { _cr4c3_subdepartment_value: editSubdept } : {}),
+        ...(editProcess ? { _cr4c3_process_value: editProcess } : {}),
+        ...(editTeam ? { _cr4c3_team_value: editTeam } : {}),
       } as Partial<Cr4c3_userprofilesBase>,
     });
     setEditing(null);
-  };
-
-  const hashPassword = async (plain: string) => {
-    const buf = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(plain));
-    return Array.from(new Uint8Array(buf)).map((b) => b.toString(16).padStart(2, "0")).join("");
   };
 
   const handleAddUser = async () => {
@@ -110,15 +131,29 @@ export function UsersPage() {
     if (!addEmail.trim() || !addEmail.includes("@")) { setAddError("Valid email is required."); return; }
     if (!addPassword.trim()) { setAddError("Password is required."); return; }
     if (!addRole) { setAddError("Role is required."); return; }
-    const hashed = await hashPassword(addPassword.trim());
+    const hashed = await sha256(addPassword.trim());
     await createUser.mutateAsync({
       cr4c3_fullname: addName.trim(),
       cr4c3_email: addEmail.trim().toLowerCase(),
       cr4c3_password: hashed,
       cr4c3_role: Number(addRole),
+      ...(addDept ? { _cr4c3_department_value: addDept } : {}),
+      ...(addSubdept ? { _cr4c3_subdepartment_value: addSubdept } : {}),
+      ...(addProcess ? { _cr4c3_process_value: addProcess } : {}),
+      ...(addTeam ? { _cr4c3_team_value: addTeam } : {}),
+      ...(addManager && addManager !== "none" ? { _cr4c3_manager_value: addManager } : {}),
+      ...(addL2 && addL2 !== "none" ? { _cr4c3_l2manager_value: addL2 } : {}),
     });
     setAddOpen(false);
     setAddName(""); setAddEmail(""); setAddPassword(""); setAddRole("");
+    setAddDept(""); setAddSubdept(""); setAddProcess(""); setAddTeam("");
+    setAddManager(""); setAddL2("");
+  };
+
+  const handleDeleteUser = async () => {
+    if (!deleteConfirmId) return;
+    await deleteUser.mutateAsync(deleteConfirmId);
+    setDeleteConfirmId(null);
   };
 
   const handleAddDelegation = async () => {
@@ -161,8 +196,8 @@ export function UsersPage() {
               />
             </div>
             <GlassCard>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">Users ({filtered.length})</h3>
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[hsl(var(--border))]">
+                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Users ({filtered.length})</h3>
                 <Button size="sm" onClick={() => setAddOpen(true)}>
                   <Plus className="w-4 h-4 mr-1" />
                   Add User
@@ -187,8 +222,8 @@ export function UsersPage() {
                   <TableBody>
                     {filtered.map((u) => (
                       <TableRow key={u.cr4c3_userprofileid}>
-                        <TableCell className="font-medium text-gray-900 dark:text-gray-100">{u.cr4c3_fullname}</TableCell>
-                        <TableCell className="text-gray-500 dark:text-gray-400 text-sm">{u.cr4c3_email}</TableCell>
+                        <TableCell className="font-medium text-[hsl(var(--foreground))]">{u.cr4c3_fullname}</TableCell>
+                        <TableCell className="text-[hsl(var(--foreground-muted))] text-sm">{u.cr4c3_email}</TableCell>
                         <TableCell>
                           {u.cr4c3_role !== undefined && (
                             <span className={`inline-flex items-center px-2 py-0.5 rounded text-xs font-medium ${ROLE_COLORS[u.cr4c3_role] ?? "text-gray-500"}`}>
@@ -197,9 +232,14 @@ export function UsersPage() {
                           )}
                         </TableCell>
                         <TableCell>
-                          <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(u)}>
-                            <Pencil className="w-3.5 h-3.5" />
-                          </Button>
+                          <div className="flex gap-1">
+                            <Button variant="ghost" size="icon" className="h-7 w-7" onClick={() => openEdit(u)}>
+                              <Pencil className="w-3.5 h-3.5" />
+                            </Button>
+                            <Button variant="ghost" size="icon" className="h-7 w-7 text-red-500 hover:text-red-700 hover:bg-red-50" onClick={() => setDeleteConfirmId(u.cr4c3_userprofileid!)}>
+                              <Trash2 className="w-3.5 h-3.5" />
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))}
@@ -212,8 +252,8 @@ export function UsersPage() {
           {/* ── Delegations Tab ───────────────────────────────────────────── */}
           <TabsContent value="delegations" className="space-y-4">
             <GlassCard>
-              <div className="flex items-center justify-between px-5 py-4 border-b border-gray-200 dark:border-gray-700">
-                <h3 className="text-sm font-semibold text-gray-700 dark:text-gray-300">
+              <div className="flex items-center justify-between px-5 py-4 border-b border-[hsl(var(--border))]">
+                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">
                   Delegations ({delegations?.length ?? 0})
                 </h3>
                 <Button size="sm" onClick={() => { setDelError(""); setDelegationOpen(true); }}>
@@ -245,10 +285,10 @@ export function UsersPage() {
                       const isActive = (d.cr4c3_startdate ?? "") <= today && (d.cr4c3_enddate ?? "") >= today;
                       return (
                         <TableRow key={d.cr4c3_delegationid as string}>
-                          <TableCell className="font-medium text-gray-900 dark:text-gray-100">
+                          <TableCell className="font-medium text-[hsl(var(--foreground))]">
                             {getUserName(d._cr4c3_delegator_value)}
                           </TableCell>
-                          <TableCell className="text-gray-700 dark:text-gray-300">
+                          <TableCell className="text-[hsl(var(--foreground))]">
                             {getUserName(d._cr4c3_delegate_value)}
                           </TableCell>
                           <TableCell className="text-sm text-gray-500">
@@ -292,7 +332,7 @@ export function UsersPage() {
 
       {/* Edit dialog */}
       <Dialog open={!!editing} onOpenChange={(o) => { if (!o) setEditing(null); }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Edit User — {editing?.cr4c3_fullname}</DialogTitle>
           </DialogHeader>
@@ -308,16 +348,53 @@ export function UsersPage() {
                 </SelectContent>
               </Select>
             </div>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Organisation</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Department</Label>
+                <Select value={editDept} onValueChange={setEditDept}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(departments ?? []).map((d) => <SelectItem key={d.cr4c3_departmentid} value={d.cr4c3_departmentid!}>{d.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Subdepartment</Label>
+                <Select value={editSubdept} onValueChange={setEditSubdept}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(subdepts ?? []).filter((s) => !editDept || s._cr4c3_department_value === editDept).map((s) => <SelectItem key={s.cr4c3_subdepartmentid} value={s.cr4c3_subdepartmentid!}>{s.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Process</Label>
+                <Select value={editProcess} onValueChange={setEditProcess}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(processes ?? []).filter((p) => !editSubdept || p._cr4c3_subdepartment_value === editSubdept).map((p) => <SelectItem key={p.cr4c3_processid} value={p.cr4c3_processid!}>{p.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Team</Label>
+                <Select value={editTeam} onValueChange={setEditTeam}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(teams ?? []).filter((t) => !editProcess || t._cr4c3_process_value === editProcess).map((t) => <SelectItem key={t.cr4c3_teamid} value={t.cr4c3_teamid!}>{t.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
             <div className="space-y-1.5">
               <Label>L1 Manager</Label>
               <Select value={editManager} onValueChange={setEditManager}>
                 <SelectTrigger><SelectValue placeholder="Assign L1 manager" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— None —</SelectItem>
-                  {managers.map((m) => (
-                    <SelectItem key={m.cr4c3_userprofileid} value={m.cr4c3_userprofileid!}>
-                      {m.cr4c3_fullname}
-                    </SelectItem>
+                  {(users ?? []).filter((u) => !editDept || u._cr4c3_department_value === editDept).filter((u) => u.cr4c3_role === USER_ROLE.L1Manager || u.cr4c3_role === USER_ROLE.Admin).map((m) => (
+                    <SelectItem key={m.cr4c3_userprofileid} value={m.cr4c3_userprofileid!}>{m.cr4c3_fullname}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -328,10 +405,8 @@ export function UsersPage() {
                 <SelectTrigger><SelectValue placeholder="Assign L2 manager" /></SelectTrigger>
                 <SelectContent>
                   <SelectItem value="none">— None —</SelectItem>
-                  {l2managers.map((m) => (
-                    <SelectItem key={m.cr4c3_userprofileid} value={m.cr4c3_userprofileid!}>
-                      {m.cr4c3_fullname}
-                    </SelectItem>
+                  {(users ?? []).filter((u) => u.cr4c3_role === USER_ROLE.L2Manager || u.cr4c3_role === USER_ROLE.Admin).map((m) => (
+                    <SelectItem key={m.cr4c3_userprofileid} value={m.cr4c3_userprofileid!}>{m.cr4c3_fullname}</SelectItem>
                   ))}
                 </SelectContent>
               </Select>
@@ -346,35 +421,116 @@ export function UsersPage() {
         </DialogContent>
       </Dialog>
 
+      {/* Delete User confirm dialog */}
+      <Dialog open={!!deleteConfirmId} onOpenChange={(o) => { if (!o) setDeleteConfirmId(null); }}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />Delete User
+            </DialogTitle>
+          </DialogHeader>
+          <p className="text-sm text-[hsl(var(--foreground-muted))]">
+            This will permanently delete the user account <strong>{(users ?? []).find((u) => u.cr4c3_userprofileid === deleteConfirmId)?.cr4c3_fullname}</strong>. This cannot be undone.
+          </p>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteConfirmId(null)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeleteUser} disabled={deleteUser.isPending}>
+              {deleteUser.isPending ? "Deleting…" : "Delete"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       {/* Add User dialog */}
       <Dialog open={addOpen} onOpenChange={(o) => { if (!o) { setAddOpen(false); setAddError(""); } }}>
-        <DialogContent>
+        <DialogContent className="max-w-lg max-h-[90vh] overflow-y-auto">
           <DialogHeader>
             <DialogTitle>Add User</DialogTitle>
           </DialogHeader>
           <div className="space-y-4">
-            <div className="space-y-1.5">
-              <Label>Full Name *</Label>
-              <Input placeholder="e.g. Jane Smith" value={addName} onChange={(e) => setAddName(e.target.value)} />
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5 col-span-2">
+                <Label>Full Name *</Label>
+                <Input placeholder="e.g. Jane Smith" value={addName} onChange={(e) => setAddName(e.target.value)} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Email *</Label>
+                <Input type="email" placeholder="jane@example.com" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Password *</Label>
+                <Input type="password" placeholder="Initial password" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} />
+              </div>
+              <div className="space-y-1.5 col-span-2">
+                <Label>Role *</Label>
+                <Select value={addRole} onValueChange={setAddRole}>
+                  <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
+                  <SelectContent>
+                    {Object.entries(USER_ROLE).map(([k, v]) => (
+                      <SelectItem key={k} value={String(v)}>{k.replace(/([A-Z])/g, " $1").trim()}</SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
-            <div className="space-y-1.5">
-              <Label>Email *</Label>
-              <Input type="email" placeholder="jane@example.com" value={addEmail} onChange={(e) => setAddEmail(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Password *</Label>
-              <Input type="password" placeholder="Initial password" value={addPassword} onChange={(e) => setAddPassword(e.target.value)} />
-            </div>
-            <div className="space-y-1.5">
-              <Label>Role *</Label>
-              <Select value={addRole} onValueChange={setAddRole}>
-                <SelectTrigger><SelectValue placeholder="Select role" /></SelectTrigger>
-                <SelectContent>
-                  {Object.entries(USER_ROLE).map(([k, v]) => (
-                    <SelectItem key={k} value={String(v)}>{k.replace(/([A-Z])/g, " $1").trim()}</SelectItem>
-                  ))}
-                </SelectContent>
-              </Select>
+            <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Organisation</p>
+            <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label>Department</Label>
+                <Select value={addDept} onValueChange={setAddDept}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(departments ?? []).map((d) => <SelectItem key={d.cr4c3_departmentid} value={d.cr4c3_departmentid!}>{d.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Subdepartment</Label>
+                <Select value={addSubdept} onValueChange={setAddSubdept}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(subdepts ?? []).filter((s) => !addDept || s._cr4c3_department_value === addDept).map((s) => <SelectItem key={s.cr4c3_subdepartmentid} value={s.cr4c3_subdepartmentid!}>{s.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Process</Label>
+                <Select value={addProcess} onValueChange={setAddProcess}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(processes ?? []).filter((p) => !addSubdept || p._cr4c3_subdepartment_value === addSubdept).map((p) => <SelectItem key={p.cr4c3_processid} value={p.cr4c3_processid!}>{p.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>Team</Label>
+                <Select value={addTeam} onValueChange={setAddTeam}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    {(teams ?? []).filter((t) => !addProcess || t._cr4c3_process_value === addProcess).map((t) => <SelectItem key={t.cr4c3_teamid} value={t.cr4c3_teamid!}>{t.cr4c3_name}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>L1 Manager</Label>
+                <Select value={addManager} onValueChange={setAddManager}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {(users ?? []).filter((u) => !addDept || u._cr4c3_department_value === addDept).filter((u) => u.cr4c3_role === USER_ROLE.L1Manager || u.cr4c3_role === USER_ROLE.Admin).map((u) => <SelectItem key={u.cr4c3_userprofileid} value={u.cr4c3_userprofileid!}>{u.cr4c3_fullname}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
+              <div className="space-y-1.5">
+                <Label>L2 Manager</Label>
+                <Select value={addL2} onValueChange={setAddL2}>
+                  <SelectTrigger><SelectValue placeholder="Select…" /></SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="none">None</SelectItem>
+                    {(users ?? []).filter((u) => u.cr4c3_role === USER_ROLE.L2Manager || u.cr4c3_role === USER_ROLE.Admin).map((u) => <SelectItem key={u.cr4c3_userprofileid} value={u.cr4c3_userprofileid!}>{u.cr4c3_fullname}</SelectItem>)}
+                  </SelectContent>
+                </Select>
+              </div>
             </div>
             {addError && <p className="text-xs text-red-600">{addError}</p>}
           </div>

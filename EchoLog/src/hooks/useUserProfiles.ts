@@ -51,3 +51,18 @@ export function useUpdateUserProfile() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Operation failed"),
   });
 }
+
+export function useDeleteUserProfile() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await Cr4c3_userprofilesService.delete(id);
+      unwrapResult(result);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [USER_PROFILES_KEY] });
+      toast.success("User deleted");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed"),
+  });
+}

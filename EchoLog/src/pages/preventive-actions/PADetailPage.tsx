@@ -12,11 +12,14 @@ import {
   Image,
   File,
   ExternalLink,
+  Trash2,
+  Users,
 } from "lucide-react";
 import { currentUserAtom } from "@/store/authAtoms";
-import { usePreventiveAction, useUpdatePA } from "@/hooks/usePreventiveActions";
+import { useRoleGuard } from "@/auth/useRoleGuard";
+import { usePreventiveAction, useUpdatePA, useDeletePA } from "@/hooks/usePreventiveActions";
 import { usePAEvidences, useCreatePAEvidence } from "@/hooks/usePAEvidences";
-import { useAuditLogs } from "@/hooks/useAuditLogs";
+import { useAuditLogs, useCreateAuditLog } from "@/hooks/useAuditLogs";
 import { useUserProfiles } from "@/hooks/useUserProfiles";
 import { PA_STATUS } from "@/lib/constants";
 import { formatDateTime, formatDate, isOverdue } from "@/lib/utils";
@@ -50,20 +53,24 @@ const UPLOAD_LOCATION_MAP: Record<number, string> = {
 function FileIcon({ type }: { type?: number }) {
   if (type === 564060003) return <Image className="w-5 h-5 text-blue-500" aria-hidden="true" />;
   if (type === 564060000) return <FileText className="w-5 h-5 text-red-500" aria-hidden="true" />;
-  return <File className="w-5 h-5 text-gray-500" aria-hidden="true" />;
+  return <File className="w-5 h-5 text-[hsl(var(--foreground-muted))]" aria-hidden="true" />;
 }
 
 export function PADetailPage() {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  useAtomValue(currentUserAtom);
+  const user = useAtomValue(currentUserAtom);
 
+  const guard = useRoleGuard();
   const { data: pa, isLoading } = usePreventiveAction(id);
   const { data: evidences } = usePAEvidences(id);
   const { data: auditLogs } = useAuditLogs(undefined, id);
   const { data: userProfiles } = useUserProfiles();
   const updatePA = useUpdatePA();
+  const deletePA = useDeletePA();
+  const createAuditLog = useCreateAuditLog();
   const createEvidence = useCreatePAEvidence();
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
 
   const [isEditingTitle, setIsEditingTitle] = useState(false);
   const [draftTitle, setDraftTitle] = useState("");
@@ -74,8 +81,10 @@ export function PADetailPage() {
   const [attachFileUrl, setAttachFileUrl] = useState("");
   const [attachFileType, setAttachFileType] = useState<string>("564060000");
   const [attachLocation, setAttachLocation] = useState<string>("564060000");
+  const [reassignPaOpen, setReassignPaOpen] = useState(false);
+  const [reassignPaOwner, setReassignPaOwner] = useState("");
   if (isLoading) return <div className="p-6"><SkeletonCard /></div>;
-  if (!pa) return <div className="p-8 text-center text-gray-500">Preventive action not found.</div>;
+  if (!pa) return <div className="p-8 text-center text-[hsl(var(--foreground-muted))]">Preventive action not found.</div>;
 
   const isCompleted = pa.cr4c3_status === PA_STATUS.Completed;
   const overdue = !isCompleted && isOverdue(pa.cr4c3_duedate);
@@ -118,6 +127,34 @@ export function PADetailPage() {
     toast.success("Marked as done");
   };
 
+  const canDelete = guard.isAdmin || guard.isL1Manager || guard.isL2Manager;
+  const canReassignPA = guard.isAdmin || guard.isL1Manager || guard.isL2Manager;
+
+  const handleReassignPA = async () => {
+    if (!reassignPaOwner) return;
+    const prev = pa._cr4c3_paowner_value;
+    await updatePA.mutateAsync({ id: id!, fields: { _cr4c3_paowner_value: reassignPaOwner } });
+    createAuditLog.mutate({
+      cr4c3_entityid: id,
+      cr4c3_entitytype: "PreventiveAction",
+      cr4c3_action: 564060001,
+      cr4c3_description: "PA owner changed",
+      cr4c3_fieldchanged: "_cr4c3_paowner_value",
+      cr4c3_oldvalue: getUserName(prev) ?? prev ?? "—",
+      cr4c3_newvalue: getUserName(reassignPaOwner) ?? reassignPaOwner,
+      _cr4c3_actor_value: user?.cr4c3_userprofileid,
+      cr4c3_timestamp: new Date().toISOString(),
+    });
+    setReassignPaOpen(false);
+    toast.success("PA reassigned");
+  };
+
+  const handleDeletePA = async () => {
+    await deletePA.mutateAsync(id!);
+    toast.success("Preventive action deleted");
+    navigate("/preventive-actions");
+  };
+
   const handleAddAttachment = async () => {
     if (!attachFileName.trim() || !attachFileUrl.trim()) { toast.error("File name and URL are required"); return; }
     await createEvidence.mutateAsync({
@@ -137,16 +174,16 @@ export function PADetailPage() {
   return (
     <PageWrapper>
       {/* Sticky top bar */}
-      <div className="sticky top-0 z-10 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 py-3 bg-white/80 backdrop-blur border-b border-gray-100 flex items-center gap-3">
+      <div className="sticky top-0 z-10 -mx-4 px-4 sm:-mx-6 sm:px-6 lg:-mx-8 lg:px-8 py-3 bg-[hsl(var(--background-card)/0.8)] backdrop-blur border-b border-[hsl(var(--border)/0.7)] flex items-center gap-3">
         <Button variant="ghost" size="sm" onClick={() => navigate(-1)} className="-ml-2">
           <ArrowLeft className="w-4 h-4 mr-1" aria-hidden="true" />
           Back
         </Button>
-        <span className="text-gray-300">/</span>
-        <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-gray-500">
+        <span className="text-[hsl(var(--border))]">/</span>
+        <nav aria-label="Breadcrumb" className="flex items-center gap-1 text-xs text-[hsl(var(--foreground-muted))]">
           <Link to="/preventive-actions" className="hover:text-primary transition-colors">Preventive Actions</Link>
-          <span className="text-gray-300">/</span>
-          <span className="text-gray-800 font-medium truncate max-w-xs">{pa.cr4c3_title}</span>
+          <span className="text-[hsl(var(--border))]">/</span>
+          <span className="text-[hsl(var(--foreground))] font-medium truncate max-w-xs">{pa.cr4c3_title}</span>
         </nav>
         <div className="ml-auto flex gap-2">
           <Button variant="outline" size="sm" onClick={() => setAttachDialogOpen(true)}>
@@ -163,6 +200,12 @@ export function PADetailPage() {
             <span className="inline-flex items-center gap-1 rounded-full bg-green-100 px-3 py-1 text-xs font-semibold text-green-700 border border-green-200">
               Completed
             </span>
+          )}
+          {canDelete && (
+            <Button variant="outline" size="sm" className="text-red-600 border-red-200 hover:bg-red-50" onClick={() => setDeleteDialogOpen(true)}>
+              <Trash2 className="w-4 h-4 mr-1.5" />
+              Delete
+            </Button>
           )}
         </div>
       </div>
@@ -190,7 +233,7 @@ export function PADetailPage() {
                 </div>
               ) : (
                 <div className="flex items-start gap-3 group">
-                  <h2 className="text-xl font-bold text-gray-900 flex-1">{pa.cr4c3_title}</h2>
+                  <h2 className="text-xl font-bold text-[hsl(var(--foreground))] flex-1">{pa.cr4c3_title}</h2>
                   <Button
                     variant="ghost"
                     size="icon"
@@ -217,7 +260,7 @@ export function PADetailPage() {
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
               <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-gray-800">Description</h3>
+                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Description</h3>
                 {!isEditingDesc && (
                   <Button variant="ghost" size="sm" className="h-7 text-xs" onClick={() => { setDraftDesc(pa.cr4c3_description ?? ""); setIsEditingDesc(true); }}>
                     <Edit2 className="w-3 h-3 mr-1" aria-hidden="true" />
@@ -240,8 +283,8 @@ export function PADetailPage() {
                   </div>
                 </div>
               ) : (
-                <p className="text-sm text-gray-700 whitespace-pre-wrap leading-relaxed">
-                  {pa.cr4c3_description || <span className="text-gray-400 italic">No description. Click Edit to add one.</span>}
+                <p className="text-sm text-[hsl(var(--foreground))] whitespace-pre-wrap leading-relaxed">
+                  {pa.cr4c3_description || <span className="text-[hsl(var(--foreground-muted))] italic">No description. Click Edit to add one.</span>}
                 </p>
               )}
             </GlassCard>
@@ -251,16 +294,16 @@ export function PADetailPage() {
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
               <div className="flex items-center justify-between mb-4">
-                <h3 className="text-sm font-semibold text-gray-800 flex items-center gap-1.5">
+                <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] flex items-center gap-1.5">
                   <Paperclip className="w-4 h-4" aria-hidden="true" />
-                  Attachments {evidences && evidences.length > 0 && <span className="ml-1 rounded-full bg-gray-100 px-1.5 text-xs text-gray-600">{evidences.length}</span>}
+                  Attachments {evidences && evidences.length > 0 && <span className="ml-1 rounded-full bg-[hsl(var(--background))] px-1.5 text-xs text-[hsl(var(--foreground-muted))]">{evidences.length}</span>}
                 </h3>
                 <Button variant="outline" size="sm" onClick={() => setAttachDialogOpen(true)}>
                   Add File
                 </Button>
               </div>
               {!evidences || evidences.length === 0 ? (
-                <div className="rounded-xl border-2 border-dashed border-gray-200 py-8 text-center text-sm text-gray-400">
+                <div className="rounded-xl border-2 border-dashed border-[hsl(var(--border))] py-8 text-center text-sm text-[hsl(var(--foreground-muted))]">
                   No attachments yet
                 </div>
               ) : (
@@ -272,18 +315,18 @@ export function PADetailPage() {
                       target="_blank"
                       rel="noopener noreferrer"
                       role="listitem"
-                      className="flex items-start gap-3 p-3 rounded-lg border border-gray-200 hover:bg-gray-50 transition-colors group"
+                      className="flex items-start gap-3 p-3 rounded-lg border border-[hsl(var(--border))] hover:bg-[hsl(var(--background))] transition-colors group"
                       aria-label={`Open ${ev.cr4c3_filename}`}
                     >
                       <FileIcon type={ev.cr4c3_filetype} />
                       <div className="flex-1 min-w-0">
-                        <p className="text-sm font-medium text-gray-900 truncate">{ev.cr4c3_filename}</p>
-                        <p className="text-xs text-gray-400">
+                        <p className="text-sm font-medium text-[hsl(var(--foreground))] truncate">{ev.cr4c3_filename}</p>
+                        <p className="text-xs text-[hsl(var(--foreground-muted))]">
                           {FILE_TYPE_MAP[ev.cr4c3_filetype ?? 564060004] ?? "File"} · {UPLOAD_LOCATION_MAP[ev.cr4c3_uploadlocation ?? 564060002] ?? "Unknown"}
                         </p>
-                        {ev.cr4c3_uploadedat && <p className="text-xs text-gray-400">{formatDate(ev.cr4c3_uploadedat)}</p>}
+                        {ev.cr4c3_uploadedat && <p className="text-xs text-[hsl(var(--foreground-muted))]">{formatDate(ev.cr4c3_uploadedat)}</p>}
                       </div>
-                      <ExternalLink className="w-4 h-4 text-gray-300 group-hover:text-primary transition-colors flex-shrink-0" aria-hidden="true" />
+                      <ExternalLink className="w-4 h-4 text-[hsl(var(--border))] group-hover:text-primary transition-colors flex-shrink-0" aria-hidden="true" />
                     </a>
                   ))}
                 </div>
@@ -294,23 +337,23 @@ export function PADetailPage() {
           {/* Activity timeline */}
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5">
-              <h3 className="text-sm font-semibold text-gray-800 mb-4">Activity</h3>
+              <h3 className="text-sm font-semibold text-[hsl(var(--foreground))] mb-4">Activity</h3>
               {!auditLogs || auditLogs.length === 0 ? (
-                <div className="py-6 text-center text-sm text-gray-400">No activity recorded yet.</div>
+                <div className="py-6 text-center text-sm text-[hsl(var(--foreground-muted))]">No activity recorded yet.</div>
               ) : (
                 <div className="relative pl-6 space-y-3" role="list" aria-label="Activity timeline">
-                  <div className="absolute left-2 top-2 bottom-2 border-l-2 border-gray-100" aria-hidden="true" />
+                  <div className="absolute left-2 top-2 bottom-2 border-l-2 border-[hsl(var(--border)/0.7)]" aria-hidden="true" />
                   {auditLogs.map((log) => (
                     <div key={log.cr4c3_auditlogid} className="relative" role="listitem">
                       <div className="absolute -left-4 top-1.5 w-2.5 h-2.5 rounded-full bg-primary border-2 border-white" aria-hidden="true" />
                       <div className="flex justify-between flex-wrap gap-1">
-                        <p className="text-sm text-gray-800">{log.cr4c3_description}</p>
-                        <time className="text-xs text-gray-400">{formatDateTime(log.cr4c3_timestamp)}</time>
+                        <p className="text-sm text-[hsl(var(--foreground))]">{log.cr4c3_description}</p>
+                        <time className="text-xs text-[hsl(var(--foreground-muted))]">{formatDateTime(log.cr4c3_timestamp)}</time>
                       </div>
                       {log.cr4c3_fieldchanged && (
                         <div className="mt-1 flex items-center gap-2 text-xs flex-wrap">
                           <code className="px-1.5 py-0.5 rounded bg-red-50 text-red-700 line-through">{log.cr4c3_oldvalue ?? "—"}</code>
-                          <span className="text-gray-400">→</span>
+                          <span className="text-[hsl(var(--foreground-muted))]">→</span>
                           <code className="px-1.5 py-0.5 rounded bg-green-50 text-green-700">{log.cr4c3_newvalue ?? "—"}</code>
                         </div>
                       )}
@@ -326,12 +369,12 @@ export function PADetailPage() {
         <div className="space-y-4">
           <motion.div variants={itemVariants}>
             <GlassCard className="p-5 space-y-4">
-              <h3 className="text-sm font-semibold text-gray-800">Details</h3>
+              <h3 className="text-sm font-semibold text-[hsl(var(--foreground))]">Details</h3>
               <Separator />
 
               {/* Status */}
               <div className="space-y-1.5">
-                <Label htmlFor="pa-status-select" className="text-xs text-gray-500">Status</Label>
+                <Label htmlFor="pa-status-select" className="text-xs text-[hsl(var(--foreground-muted))]">Status</Label>
                 <Select value={String(pa.cr4c3_status ?? PA_STATUS.NotStarted)} onValueChange={handleStatusChange}>
                   <SelectTrigger id="pa-status-select" aria-label="Change status">
                     <SelectValue />
@@ -346,13 +389,28 @@ export function PADetailPage() {
 
               {/* Assignee */}
               <div className="space-y-1.5">
-                <Label className="text-xs text-gray-500">Owner</Label>
-                <p className="text-sm text-gray-900">{getUserName(pa._cr4c3_paowner_value) ?? <span className="text-gray-400 italic">Unassigned</span>}</p>
+                <Label className="text-xs text-[hsl(var(--foreground-muted))]">Owner</Label>
+                <div className="flex items-center justify-between gap-2">
+                  <p className="text-sm text-[hsl(var(--foreground))]">
+                    {getUserName(pa._cr4c3_paowner_value) ?? <span className="text-[hsl(var(--foreground-muted))] italic">Unassigned</span>}
+                  </p>
+                  {canReassignPA && (
+                    <Button
+                      variant="ghost"
+                      size="sm"
+                      className="h-7 text-xs shrink-0"
+                      onClick={() => { setReassignPaOwner(pa._cr4c3_paowner_value ?? ""); setReassignPaOpen(true); }}
+                    >
+                      <Users className="w-3.5 h-3.5 mr-1" aria-hidden="true" />
+                      Reassign
+                    </Button>
+                  )}
+                </div>
               </div>
 
               {/* Due Date */}
               <div className="space-y-1.5">
-                <Label htmlFor="pa-due-input" className="text-xs text-gray-500">Due Date</Label>
+                <Label htmlFor="pa-due-input" className="text-xs text-[hsl(var(--foreground-muted))]">Due Date</Label>
                 <input
                   id="pa-due-input"
                   type="date"
@@ -372,7 +430,7 @@ export function PADetailPage() {
               {/* Parent incident */}
               {pa._cr4c3_incident_value && (
                 <div className="space-y-1.5">
-                  <Label className="text-xs text-gray-500">Parent Incident</Label>
+                  <Label className="text-xs text-[hsl(var(--foreground-muted))]">Parent Incident</Label>
                   <Button
                     variant="ghost"
                     size="sm"
@@ -389,13 +447,13 @@ export function PADetailPage() {
               <Separator />
               <dl className="space-y-2 text-xs">
                 <div className="flex justify-between">
-                  <dt className="text-gray-500">Created</dt>
-                  <dd className="text-gray-900">{formatDate(pa.cr4c3_createdat)}</dd>
+                  <dt className="text-[hsl(var(--foreground-muted))]">Created</dt>
+                  <dd className="text-[hsl(var(--foreground))]">{formatDate(pa.cr4c3_createdat)}</dd>
                 </div>
                 {pa.cr4c3_completedat && (
                   <div className="flex justify-between">
-                    <dt className="text-gray-500">Completed</dt>
-                    <dd className="text-gray-900">{formatDate(pa.cr4c3_completedat)}</dd>
+                    <dt className="text-[hsl(var(--foreground-muted))]">Completed</dt>
+                    <dd className="text-[hsl(var(--foreground))]">{formatDate(pa.cr4c3_completedat)}</dd>
                   </div>
                 )}
               </dl>
@@ -453,6 +511,50 @@ export function PADetailPage() {
             <Button variant="outline" onClick={() => setAttachDialogOpen(false)}>Cancel</Button>
             <Button onClick={handleAddAttachment} disabled={createEvidence.isPending}>
               {createEvidence.isPending ? "Attaching…" : "Attach"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+      {/* Reassign PA Dialog */}
+      <Dialog open={reassignPaOpen} onOpenChange={setReassignPaOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle>Reassign Preventive Action</DialogTitle>
+            <DialogDescription>Transfer ownership of this action to another team member.</DialogDescription>
+          </DialogHeader>
+          <div className="space-y-3 py-2">
+            <Label htmlFor="pa-reassign-select">New Owner</Label>
+            <Select value={reassignPaOwner} onValueChange={setReassignPaOwner}>
+              <SelectTrigger id="pa-reassign-select"><SelectValue placeholder="Select owner" /></SelectTrigger>
+              <SelectContent>
+                {(userProfiles ?? []).map((u) => (
+                  <SelectItem key={u.cr4c3_userprofileid} value={u.cr4c3_userprofileid!}>{u.cr4c3_fullname}</SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setReassignPaOpen(false)}>Cancel</Button>
+            <Button onClick={handleReassignPA} disabled={!reassignPaOwner || updatePA.isPending}>
+              {updatePA.isPending ? "Saving…" : "Reassign"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
+      {/* Delete Confirm Dialog */}
+      <Dialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <DialogContent className="max-w-sm">
+          <DialogHeader>
+            <DialogTitle className="flex items-center gap-2 text-red-600">
+              <Trash2 className="w-5 h-5" />Delete Preventive Action
+            </DialogTitle>
+            <DialogDescription>This will permanently delete "{pa?.cr4c3_title}". This action cannot be undone.</DialogDescription>
+          </DialogHeader>
+          <DialogFooter>
+            <Button variant="outline" onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+            <Button variant="destructive" onClick={handleDeletePA} disabled={deletePA.isPending}>
+              {deletePA.isPending ? "Deleting…" : "Delete"}
             </Button>
           </DialogFooter>
         </DialogContent>

@@ -40,3 +40,18 @@ export function useUpdateSLARule() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Operation failed"),
   });
 }
+
+export function useDeleteSLARule() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await Cr4c3_slarulesService.delete(id);
+      unwrapResult(result);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [SLA_KEY] });
+      toast.success("SLA rule deleted");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed"),
+  });
+}

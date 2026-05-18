@@ -54,3 +54,18 @@ export function useUpdatePA() {
     onError: (err) => toast.error(err instanceof Error ? err.message : "Operation failed"),
   });
 }
+
+export function useDeletePA() {
+  const qc = useQueryClient();
+  return useMutation({
+    mutationFn: async (id: string) => {
+      const result = await Cr4c3_preventiveactionsService.delete(id);
+      unwrapResult(result);
+    },
+    onSuccess: () => {
+      qc.invalidateQueries({ queryKey: [PA_KEY] });
+      toast.success("Preventive action deleted");
+    },
+    onError: (err) => toast.error(err instanceof Error ? err.message : "Delete failed"),
+  });
+}
