@@ -14,6 +14,17 @@ import { unwrapResult } from "@/lib/utils";
 import { AlertCircle, Lock, Mail, Zap, FlaskConical, Timer } from "lucide-react";
 import { USER_ROLE } from "@/lib/constants";
 
+// ─── Password hashing ────────────────────────────────────────────────────────
+const hashPassword = async (plain: string): Promise<string> => {
+  const buf = await crypto.subtle.digest(
+    "SHA-256",
+    new TextEncoder().encode(plain)
+  );
+  return Array.from(new Uint8Array(buf))
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+};
+
 // ─── Dev bypass ───────────────────────────────────────────────────────────────
 const DEV_USER = {
   cr4c3_userprofileid: "00000000-0000-0000-0000-000000000001",
@@ -166,7 +177,8 @@ export function LoginPage() {
       }
 
       const storedValue = passwordField.trim();
-      const passwordMatch = values.password === storedValue;
+      const hashedInput = await hashPassword(values.password.trim());
+      const passwordMatch = hashedInput === storedValue;
 
       if (!passwordMatch) {
         const newCount = failedAttempts + 1;
