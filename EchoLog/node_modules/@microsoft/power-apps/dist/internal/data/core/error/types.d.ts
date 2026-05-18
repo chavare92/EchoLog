@@ -1,0 +1,30 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+import type { ErrorCodes } from './codes';
+/**
+ * Base error class for PowerDataRuntime operations
+ */
+export declare class PowerDataRuntimeError extends Error {
+    readonly code: ErrorCodes;
+    /**
+     * Creates an instance of PowerDataRuntimeError.
+     * @param code - The error code associated with the error.
+     * @param additionalInfo - Optional additional information to include in the error message.
+     * @param messageOverride - Optional override for the default error message.
+     */
+    constructor(code: ErrorCodes, additionalInfo?: string, messageOverride?: string);
+}
+export interface PowerDataRuntimeHttpError {
+    message: string;
+    status?: number;
+    requestId?: string;
+    stack?: string;
+}
+export interface HttpErrorResponse {
+    status?: number;
+    headers?: {
+        [key: string]: string;
+    };
+}
+//# sourceMappingURL=types.d.ts.map

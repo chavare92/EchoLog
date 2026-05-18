@@ -1,0 +1,10 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+import type { CompatibilityCheckerResult, MessageReceiver, SendMessagePlugin } from './MessageReceiver.Types';
+export declare class SendMessage implements SendMessagePlugin {
+    static createInstanceAsync(): Promise<SendMessagePlugin>;
+    getMessageReceiverAsync(receiverName: string, isCompatibleChecker: (versionInfo: string) => CompatibilityCheckerResult): Promise<MessageReceiver>;
+    private _getVersionInfo;
+}
+//# sourceMappingURL=SendMessage.d.ts.map

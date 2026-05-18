@@ -1,0 +1,12 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+import { SendMessageOperation } from './SendMessageOperation';
+export declare class CompatibleMessageReceiver {
+    private _receiverName;
+    versionInfo: string | undefined;
+    readonly isCompatible = true;
+    constructor(_receiverName: string, versionInfo: string | undefined);
+    sendMessage(message: string, onMessageReceived: ((message: string) => void) | undefined): Promise<SendMessageOperation>;
+}
+//# sourceMappingURL=CompatibleMessageReceiver.d.ts.map

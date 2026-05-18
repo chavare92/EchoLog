@@ -1,0 +1,11 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+import type { DataSourcesInfo, IDataOperation, IOperationResult } from '../types';
+/**
+ * Executes a data operation.
+ * @param operation - The data operation to execute.
+ * @returns - A promise that resolves to the result of the operation.
+ */
+export declare function executeAsync<TRequest, TResult>(dataSourcesInfo: DataSourcesInfo, operation: IDataOperation<TRequest>): Promise<IOperationResult<TResult>>;
+//# sourceMappingURL=execute.d.ts.map

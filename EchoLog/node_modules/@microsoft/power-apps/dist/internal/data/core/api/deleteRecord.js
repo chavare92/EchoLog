@@ -1,0 +1,15 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+import { getPowerSdkInstance } from '../runtime/getRuntimeContext';
+/**
+ * Deletes a record from the specified table.
+ * @param dataSourcesInfo - The data sources information.
+ * @param tableName - The name of the table to delete the record from.
+ * @param recordId - The ID of the record to delete.
+ * @returns A promise that resolves to the result of the delete operation.
+ */
+export async function deleteRecordAsync(dataSourcesInfo, tableName, recordId) {
+    return await (await getPowerSdkInstance(dataSourcesInfo)).Data.deleteRecordAsync(tableName, recordId);
+}
+//# sourceMappingURL=deleteRecord.js.map

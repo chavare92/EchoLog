@@ -1,0 +1,37 @@
+/*!
+ * Copyright (C) Microsoft Corporation. All rights reserved.
+ */
+export var HeaderNames;
+(function (HeaderNames) {
+    /**
+     * The name of the header used to specify the request ID.
+     */
+    HeaderNames["RequestId"] = "x-ms-client-request-id";
+})(HeaderNames || (HeaderNames = {}));
+/**
+ * Enum for DataverseDataOperation operation names.
+ */
+export var DataverseOperationName;
+(function (DataverseOperationName) {
+    DataverseOperationName["CreateRecord"] = "dataverseDataOperation.createRecordAsync";
+    DataverseOperationName["UpdateRecord"] = "dataverseDataOperation.updateRecordAsync";
+    DataverseOperationName["UploadRecord"] = "dataverseDataOperation.uploadFileToRecord";
+    DataverseOperationName["DownloadRecord"] = "dataverseDataOperation.downloadFileFromRecord";
+    DataverseOperationName["DeleteRecord"] = "dataverseDataOperation.deleteRecordAsync";
+    DataverseOperationName["DeleteFileOrImageRecord"] = "dataverseDataOperation.deleteFileOrImageFromRecord";
+    DataverseOperationName["RetrieveRecord"] = "dataverseDataOperation.retrieveRecordAsync";
+    DataverseOperationName["RetrieveMultipleRecords"] = "dataverseDataOperation.retrieveMultipleRecordsAsync";
+    DataverseOperationName["ExecuteCustomApi"] = "dataverseDataOperation.executeCustomApi";
+})(DataverseOperationName || (DataverseOperationName = {}));
+/**
+ * Enum for ConnectorDataOperation operation names.
+ */
+export var ConnectorOperationName;
+(function (ConnectorOperationName) {
+    ConnectorOperationName["CreateRecord"] = "connectorDataOperation.createRecordAsync";
+    ConnectorOperationName["UpdateRecord"] = "connectorDataOperation.updateRecordAsync";
+    ConnectorOperationName["DeleteRecord"] = "connectorDataOperation.deleteRecordAsync";
+    ConnectorOperationName["RetrieveRecord"] = "connectorDataOperation.retrieveRecordAsync";
+    ConnectorOperationName["RetrieveMultipleRecords"] = "connectorDataOperation.retrieveMultipleRecordsAsync";
+})(ConnectorOperationName || (ConnectorOperationName = {}));
+//# sourceMappingURL=constants.js.map
