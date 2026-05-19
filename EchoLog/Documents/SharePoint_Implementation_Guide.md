@@ -389,3 +389,20 @@ Create columns:
 ## 8. Optional next step: automation
 
 After manual creation is validated, automate provisioning via PnP PowerShell template so environments (Dev/UAT/Prod) stay aligned.
+
+## 9. Run the provisioning script
+
+An automated script is available at [Documents/SharePoint_Provisioning_PnP.ps1](Documents/SharePoint_Provisioning_PnP.ps1).
+
+Run from terminal:
+
+```powershell
+pwsh -File ./Documents/SharePoint_Provisioning_PnP.ps1 -SiteUrl "https://yourtenant.sharepoint.com/sites/EchoLog"
+```
+
+What it does:
+
+1. Connects with interactive sign-in.
+2. Creates all 14 lists in dependency order.
+3. Creates standard fields, choice fields, and lookup fields.
+4. Applies required/indexed settings and unique constraints for key fields.
